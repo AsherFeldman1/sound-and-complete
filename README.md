@@ -8,7 +8,7 @@ You answer on your guitar. At the end you see which rules you kept.
 The LLM is not trusted. Before a call is played, a checker written in Lean
 confirms that at least one answer obeys all your rules. The proofs show this
 check is exact: it never lets an unanswerable call through, and never rejects
-an answerable one.
+a playable call that can be answered.
 
 ```
 make install && make run    # build, then open the app at http://localhost:8765
@@ -42,11 +42,13 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 |---|---|
 | `SoundAndComplete/Music.lean` | Notes, the shuffle grid, the A minor blues. Part of the spec. |
 | `SoundAndComplete/Spec.lean` | **What the rules mean.** Read this to trust the app. |
-| `SoundAndComplete/SpecExamples.lean` | Proofs that the spec accepts a real answer, rejects bad ones, and catches rule conflicts. |
+| `SoundAndComplete/SpecExamples.lean` | Proofs that the spec accepts real answers, rejects bad ones, and catches rule conflicts. |
 | `SoundAndComplete/Search.lean` | Generic checkers and the search. |
 | `SoundAndComplete/Checkers.lean` | One checker per rule. |
 | `SoundAndComplete/App.lean` | Answer search, grading, the gate, conflict warnings. |
 | `SoundAndComplete/Theorems.lean` | **The promises**, each explained in plain words. |
+| `SoundAndComplete/TheoremExamples.lean` | Each promise used on a real call, so none of them is empty. |
+| `SoundAndComplete/Challenge.lean` | The statements alone. Comparator checks that the proofs match them. |
 | `SoundAndComplete/CheckerTests.lean` | Tests that run on every build. |
 | `Main.lean` | The bridge the app runs: JSON in, JSON out. Every decision comes from the proven functions. |
 | `web/` | Browser app: `server.js` (API + Claude), `main.js` (UI), `audio/band.js` (backing band and lead guitar), `audio/input.js` (mic → notes). `lab.html` tunes detection. |
@@ -54,16 +56,18 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 ## The promises
 
 1. **Each checker means its rule** (`ruleChecker_correct`).
-2. **Honest report card** (`grade_correct`).
+2. **Honest report card**: each mark is right (`grade_correct`), and each mark sits next to its own rule (`grade_keeps_rule_order`).
 3. **Exact search**: suggested answers are real (`findAnswer_sound`), and none are missed (`findAnswer_complete`).
 4. **Safe gate**: every call the app plays can be answered, whatever the LLM proposes (`chooseCall_safe`).
-5. **Useful gate**: it only rejects calls that can't be answered (`chooseCall_rejects_only_bad`).
+5. **Useful gate**: it only rejects calls that are unplayable or can't be answered (`chooseCall_rejects_only_bad`).
 6. **Honest warnings**: "these rules can never all hold" is always true (`knownConflict_sound`).
+7. **Honest hint**: the "answer that keeps every rule" shown after a song does keep every rule (`isCorrectAnswer_iff`).
 
-Promises about rules apply to the rules the app offers (`Rule.enabled`). A rule
-is offered only once its checker proof is done.
+The promises hold for all 13 rules, with no `sorry` (`make audit`).
 
-Status: all promises proven for all 13 rules, with no `sorry` (`make audit`).
+The report card judges each rule alone, so silence passes rules that only forbid
+something, such as "never play A". A call or answer the app suggests always has
+at least one note.
 
 ## Trusted (not proven)
 
@@ -71,9 +75,12 @@ Status: all promises proven for all 13 rules, with no `sorry` (`make audit`).
 - Snapping your timing to the 24-slot grid.
 - The JSON bridge (`Main.lean`, `web/server.js`, `web/lean.js`) that passes data to and from the Lean core.
 - The LLM is **not** trusted: its calls only play if the proven gate accepts them. The
-  "answer that keeps every rule" shown after a song is picked from musical ideas by the
-  proven grader (falling back to the proven search's own answer).
-- The Lean compiler and runtime.
+  "answer that keeps every rule" comes from unproven code, but the proven check picks it
+  (falling back to the proven search's own answer).
+- The Lean compiler, runtime and kernel. The proofs use only Lean's three standard
+  axioms: `propext`, `Classical.choice` and `Quot.sound`.
+- `Challenge.lean` imports the real definitions, so Comparator pins the theorem
+  statements, not `Spec.lean`. A person must review changes to the spec.
 
 ## Sound credits
 
@@ -91,7 +98,7 @@ If the samples are missing, the band falls back to its built-in synthesized soun
 
 ## Comparator
 
-`SoundAndComplete/Challenge.lean` restates the seven main theorems with no
+`SoundAndComplete/Challenge.lean` restates the nine main theorems with no
 proof; `comparator.json` lists them and allows only the standard axioms
 (`propext`, `Quot.sound`, `Classical.choice`). `make comparator` runs
 `lake check` and `lake comparator` in a Linux container (they need the Linux

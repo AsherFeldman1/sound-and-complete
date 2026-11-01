@@ -17,6 +17,8 @@ open Blues
 
 #audit_axioms ruleChecker_correct
 #audit_axioms grade_correct
+#audit_axioms grade_keeps_rule_order
+#audit_axioms isCorrectAnswer_iff
 #audit_axioms findAnswer_sound
 #audit_axioms findAnswer_complete
 #audit_axioms chooseCall_safe

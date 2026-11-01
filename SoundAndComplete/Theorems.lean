@@ -16,11 +16,8 @@ spec and with these statements, you can trust the app without reading any proof.
 
 The LLM is not trusted anywhere. It only proposes calls; `chooseCall` decides.
 
-**Enabled rules.** Promises about your rules hold for rules the app offers
-(`Rule.enabled`). A rule is offered only once its checker proof is finished,
-so these theorems never rest on an unfinished proof.
-
-STATUS: see `make audit` for which proofs are finished.
+The promises cover all 13 rules, for every value of their settings. Each one is
+also tried on a real example in `TheoremExamples.lean`.
 -/
 
 namespace Blues
@@ -38,7 +35,7 @@ you cannot answer.
 **What it does not say:** that the notes the app *heard* are the notes you
 *played*. Pitch and timing detection is outside the proof. -/
 theorem ruleChecker_correct (ctx : Context) (call answer : Phrase) (r : Rule)
-    (hr : r.enabled = true) (hlen : answer.length = phraseSlots) :
+    (hlen : answer.length = phraseSlots) :
     checkRule ctx call answer r = true ↔ RuleHolds ctx call answer r := by
   unfold checkRule
   cases r with
@@ -63,14 +60,17 @@ check mark exactly when you obeyed it, and an X exactly when you broke it.
 
 **Why you care:** this is the screen the player sees at the end.
 
-**What it does not say:** anything about timing you played between grid slots.
-The app snaps what you played to the 24-slot grid first; that step is outside
-this theorem. -/
+**What it does not say:**
+* Anything about timing you played between grid slots. The app snaps what you
+  played to the 24-slot grid first; that step is outside this theorem.
+* That you played at all. A rule that only forbids something is obeyed by
+  silence (`silence_obeys_avoid` in `SpecExamples.lean`), so a silent answer can
+  get check marks. Only `isCorrectAnswer` also asks for at least one note. -/
 theorem grade_correct (ctx : Context) (call : Phrase) (rules : List Rule) (played : Phrase)
-    (hlen : played.length = phraseSlots) (r : Rule) (hr : r ∈ rules) (he : r.enabled = true) :
+    (hlen : played.length = phraseSlots) (r : Rule) (hr : r ∈ rules) :
     ((r, true) ∈ grade ctx call rules played ↔ RuleHolds ctx call played r) ∧
     ((r, false) ∈ grade ctx call rules played ↔ ¬ RuleHolds ctx call played r) := by
-  have hc := ruleChecker_correct ctx call played r he hlen
+  have hc := ruleChecker_correct ctx call played r hlen
   have key : ∀ b, (r, b) ∈ grade ctx call rules played ↔ checkRule ctx call played r = b := by
     intro b
     simp only [grade, List.mem_map, Prod.mk.injEq]
@@ -79,6 +79,38 @@ theorem grade_correct (ctx : Context) (call : Phrase) (rules : List Rule) (playe
     · intro h; exact ⟨r, hr, rfl, h⟩
   rw [key, key, ← hc]
   cases checkRule ctx call played r <;> simp
+
+/-- **In plain words:** the report has one line per rule, in the order you set
+the rules.
+
+**Why you care:** the app reads the results by position: the first result goes
+next to the first rule. If the order changed, a check mark could land on the
+wrong rule. -/
+theorem grade_keeps_rule_order (ctx : Context) (call : Phrase) (rules : List Rule)
+    (played : Phrase) : (grade ctx call rules played).map (·.1) = rules := by
+  simp [grade, Function.comp_def]
+
+/-- **In plain words:** `isCorrectAnswer` says yes exactly when the answer is
+playable and keeps every rule.
+
+**Why you care:** the app picks the musical answer it shows after a song with
+this check, so "an answer that keeps every rule" is true even though that
+answer comes from unproven code. -/
+theorem isCorrectAnswer_iff (ctx : Context) (call : Phrase) (rules : List Rule)
+    (answer : Phrase) :
+    isCorrectAnswer ctx call rules answer = true ↔ Satisfies ctx call rules answer := by
+  simp only [isCorrectAnswer, Bool.and_eq_true, Satisfies, List.all_eq_true]
+  constructor
+  · rintro ⟨hp, hall⟩
+    have hplay : Playable answer := (isPlayable_iff answer).mp hp
+    refine ⟨hplay, fun r hr => ?_⟩
+    have := hall (r, checkRule ctx call answer r) (List.mem_map_of_mem hr)
+    exact (ruleChecker_correct ctx call answer r hplay.1).mp this
+  · rintro ⟨hplay, hrules⟩
+    refine ⟨(isPlayable_iff answer).mpr hplay, ?_⟩
+    intro e he
+    obtain ⟨r, hr, rfl⟩ := List.mem_map.mp he
+    exact (ruleChecker_correct ctx call answer r hplay.1).mpr (hrules r hr)
 
 /-! ## 3. The answer search is exact -/
 
@@ -89,7 +121,7 @@ every one of your rules.
 **Why you care:** the app shows this answer as a hint after you play. It is
 also the evidence that the call was fair. -/
 theorem findAnswer_sound (ctx : Context) (call : Phrase) (rules : List Rule)
-    (hen : ∀ r ∈ rules, r.enabled = true) (answer : Phrase) :
+    (answer : Phrase) :
     findAnswer ctx call rules = some answer → Satisfies ctx call rules answer := by
   intro h
   obtain ⟨hlen, hacc⟩ := search_sound _ _ _ h
@@ -98,7 +130,7 @@ theorem findAnswer_sound (ctx : Context) (call : Phrase) (rules : List Rule)
   refine ⟨(isPlayable_iff answer).mp (by simp [hlen, phraseSlots, hplay]), ?_⟩
   intro r hr
   have := hacc (ruleChecker ctx (CallInfo.of call) r) (List.mem_cons_of_mem _ (List.mem_map_of_mem hr))
-  exact (ruleChecker_correct ctx call answer r (hen r hr) hlen).mp this
+  exact (ruleChecker_correct ctx call answer r hlen).mp this
 
 /-- **In plain words (complete):** if any correct answer exists, the app finds
 one. So when the app says "no answer exists", that is true.
@@ -106,8 +138,7 @@ one. So when the app says "no answer exists", that is true.
 **Why you care:** without this, the gate could throw away good LLM calls for no
 reason. Sound plus complete means the search is exactly right. This is the
 "sound and complete" in the project name. -/
-theorem findAnswer_complete (ctx : Context) (call : Phrase) (rules : List Rule)
-    (hen : ∀ r ∈ rules, r.enabled = true) :
+theorem findAnswer_complete (ctx : Context) (call : Phrase) (rules : List Rule) :
     Answerable ctx call rules → (findAnswer ctx call rules).isSome := by
   rintro ⟨answer, hplay, hrules⟩
   apply search_complete
@@ -125,20 +156,19 @@ theorem findAnswer_complete (ctx : Context) (call : Phrase) (rules : List Rule)
     · have := (isPlayable_iff answer).mpr hplay
       simp only [Bool.and_eq_true] at this
       exact this.2
-    · exact (ruleChecker_correct ctx call answer r (hen r hr) hplay.1).mpr (hrules r hr)
+    · exact (ruleChecker_correct ctx call answer r hplay.1).mpr (hrules r hr)
 
 /-- `callIsGood` is exactly `GoodCall`. Used by the gate theorems. -/
-theorem callIsGood_iff (ctx : Context) (rules : List Rule) (call : Phrase)
-    (hen : ∀ r ∈ rules, r.enabled = true) :
+theorem callIsGood_iff (ctx : Context) (rules : List Rule) (call : Phrase) :
     callIsGood ctx rules call = true ↔ GoodCall ctx rules call := by
   simp only [callIsGood, Bool.and_eq_true, GoodCall]
   constructor
   · rintro ⟨hp, hs⟩
     refine ⟨(isPlayable_iff call).mp hp, ?_⟩
     obtain ⟨a, ha⟩ := Option.isSome_iff_exists.mp hs
-    exact ⟨a, findAnswer_sound ctx call rules hen a ha⟩
+    exact ⟨a, findAnswer_sound ctx call rules a ha⟩
   · rintro ⟨hp, hans⟩
-    exact ⟨(isPlayable_iff call).mpr hp, findAnswer_complete ctx call rules hen hans⟩
+    exact ⟨(isPlayable_iff call).mpr hp, findAnswer_complete ctx call rules hans⟩
 
 /-! ## 4. The gate: the LLM can never hand you an impossible call -/
 
@@ -153,12 +183,12 @@ the LLM behaving well.
 
 **What it does not say:** that the answer is easy, or that the call sounds good. -/
 theorem chooseCall_safe (ctx : Context) (rules : List Rule) (proposals : List Phrase)
-    (hen : ∀ r ∈ rules, r.enabled = true) (call : Phrase) :
+    (call : Phrase) :
     chooseCall ctx rules proposals = some call →
       call ∈ proposals ∧ GoodCall ctx rules call := by
   intro h
   refine ⟨List.mem_of_find?_eq_some h, ?_⟩
-  exact (callIsGood_iff ctx rules call hen).mp (List.find?_some h)
+  exact (callIsGood_iff ctx rules call).mp (List.find?_some h)
 
 /-- **In plain words:** the gate only throws away bad calls. If it rejects every
 proposal, then none of them was both playable and answerable.
@@ -166,12 +196,12 @@ proposal, then none of them was both playable and answerable.
 **Why you care:** a gate that rejects everything is "safe" but useless. This
 rules that out. -/
 theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
-    (proposals : List Phrase) (hen : ∀ r ∈ rules, r.enabled = true) :
+    (proposals : List Phrase) :
     chooseCall ctx rules proposals = none →
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   intro h call hc hgood
   have := List.find?_eq_none.mp h call hc
-  rw [(callIsGood_iff ctx rules call hen).mpr hgood] at this
+  rw [(callIsGood_iff ctx rules call).mpr hgood] at this
   exact this rfl
 
 /-! ## 5. Warning about impossible rules -/

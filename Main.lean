@@ -96,14 +96,15 @@ def handle (j : Json) : Except String Json := do
   | "grade" =>
     let call ← parsePhrase (← j.getObjVal? "call")
     let played ← parsePhrase (← j.getObjVal? "played")
+    -- `grade_correct` only covers 24-slot answers, so stop anything else here.
+    unless played.length == phraseSlots do throw "played must have 24 slots"
     let results := (grade ctx call rules played).map (·.2)
     return Json.mkObj [("results", toJson results)]
   | "gradeMany" =>
-    -- The first candidate answer that keeps every rule, judged by the proven grader.
+    -- The first candidate answer that keeps every rule (`isCorrectAnswer_iff`).
     let call ← parsePhrase (← j.getObjVal? "call")
     let answers ← (← j.getObjValAs? (Array Json) "answers").toList.mapM parsePhrase
-    let ok (a : Phrase) := isPlayable a && (grade ctx call rules a).all (·.2)
-    return Json.mkObj [("first", match answers.findIdx? ok with
+    return Json.mkObj [("first", match answers.findIdx? (isCorrectAnswer ctx call rules) with
       | some i => toJson i
       | none => Json.null)]
   | op => throw s!"unknown op {op}"

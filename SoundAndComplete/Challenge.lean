@@ -15,34 +15,42 @@ Copy statements here word for word from `Theorems.lean`. If a statement in
 namespace Blues
 
 theorem ruleChecker_correct (ctx : Context) (call answer : Phrase) (r : Rule)
-    (hr : r.enabled = true) (hlen : answer.length = phraseSlots) :
+    (hlen : answer.length = phraseSlots) :
     checkRule ctx call answer r = true ↔ RuleHolds ctx call answer r := by
   sorry
 
 theorem grade_correct (ctx : Context) (call : Phrase) (rules : List Rule) (played : Phrase)
-    (hlen : played.length = phraseSlots) (r : Rule) (hr : r ∈ rules) (he : r.enabled = true) :
+    (hlen : played.length = phraseSlots) (r : Rule) (hr : r ∈ rules) :
     ((r, true) ∈ grade ctx call rules played ↔ RuleHolds ctx call played r) ∧
     ((r, false) ∈ grade ctx call rules played ↔ ¬ RuleHolds ctx call played r) := by
   sorry
 
+theorem grade_keeps_rule_order (ctx : Context) (call : Phrase) (rules : List Rule)
+    (played : Phrase) : (grade ctx call rules played).map (·.1) = rules := by
+  sorry
+
+theorem isCorrectAnswer_iff (ctx : Context) (call : Phrase) (rules : List Rule)
+    (answer : Phrase) :
+    isCorrectAnswer ctx call rules answer = true ↔ Satisfies ctx call rules answer := by
+  sorry
+
 theorem findAnswer_sound (ctx : Context) (call : Phrase) (rules : List Rule)
-    (hen : ∀ r ∈ rules, r.enabled = true) (answer : Phrase) :
+    (answer : Phrase) :
     findAnswer ctx call rules = some answer → Satisfies ctx call rules answer := by
   sorry
 
-theorem findAnswer_complete (ctx : Context) (call : Phrase) (rules : List Rule)
-    (hen : ∀ r ∈ rules, r.enabled = true) :
+theorem findAnswer_complete (ctx : Context) (call : Phrase) (rules : List Rule) :
     Answerable ctx call rules → (findAnswer ctx call rules).isSome := by
   sorry
 
 theorem chooseCall_safe (ctx : Context) (rules : List Rule) (proposals : List Phrase)
-    (hen : ∀ r ∈ rules, r.enabled = true) (call : Phrase) :
+    (call : Phrase) :
     chooseCall ctx rules proposals = some call →
       call ∈ proposals ∧ GoodCall ctx rules call := by
   sorry
 
 theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
-    (proposals : List Phrase) (hen : ∀ r ∈ rules, r.enabled = true) :
+    (proposals : List Phrase) :
     chooseCall ctx rules proposals = none →
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   sorry

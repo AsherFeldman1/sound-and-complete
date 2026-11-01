@@ -6,4 +6,5 @@ import SoundAndComplete.Checkers
 import SoundAndComplete.App
 import SoundAndComplete.CheckerProofs
 import SoundAndComplete.Theorems
+import SoundAndComplete.TheoremExamples
 import SoundAndComplete.CheckerTests

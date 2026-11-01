@@ -6,8 +6,9 @@ import Lean.Data.Json
 
 * `sound-and-complete serve`: the bridge to the browser app. Reads one JSON
   request per line on stdin, writes one JSON reply per line on stdout. Every
-  decision (the gate, the hint answer, the report card, the conflict warning)
-  is made by the proven functions in `App.lean`. This file only converts JSON.
+  decision (whether the rules are possible, the gate, the hint answer, the
+  report card) is made by the proven functions in `App.lean` and
+  `CallSearch.lean`. This file only converts JSON.
 * `sound-and-complete` with no arguments: a short terminal demo.
 
 This JSON glue is trusted, not proven (see the README).
@@ -15,8 +16,10 @@ This JSON glue is trusted, not proven (see the README).
 ## Requests
 
 ```
-{"op":"conflict","exchange":0,"rules":[RULE...]}
-  -> {"conflict":true|false}
+{"op":"possible","exchange":0,"rules":[RULE...]}
+  -> {"possible":true,"call":PHRASE,"answer":PHRASE}   (a call the app may play,
+                                                        and an answer to it)
+  -> {"possible":false,"call":null,"answer":null}      (proven: no call can work)
 {"op":"gate","exchange":0,"rules":[RULE...],"proposals":[PHRASE...]}
   -> {"chosen":index|null,"hint":PHRASE|null}
 {"op":"grade","exchange":0,"rules":[RULE...],"call":PHRASE,"played":PHRASE}
@@ -78,8 +81,14 @@ def handle (j : Json) : Except String Json := do
   let ctx ← parseContext j
   let rules ← (← j.getObjValAs? (Array Json) "rules").toList.mapM parseRule
   match ← j.getObjValAs? String "op" with
-  | "conflict" =>
-    return Json.mkObj [("conflict", toJson (knownConflict ctx rules))]
+  | "possible" =>
+    -- `findCall_sound` and `findCall_complete`: `none` means no call can work.
+    match findCall ctx rules with
+    | some (call, answer) =>
+      return Json.mkObj [("possible", toJson true), ("call", phraseToJson call),
+        ("answer", phraseToJson answer)]
+    | none =>
+      return Json.mkObj [("possible", toJson false), ("call", Json.null), ("answer", Json.null)]
   | "gate" =>
     let proposals ← (← j.getObjValAs? (Array Json) "proposals").toList.mapM parsePhrase
     -- The proven gate picks the call; we only report which proposal it was.
@@ -131,8 +140,8 @@ def demo : IO Unit := do
     [.startNear 2, .sayLess, .maxLeap 5, .chordToneOnBeat .third 5, .stayBetween 52 69, .leaveSpace 3]
   IO.println "A minor blues, first exchange: you answer in bars 3-4 over Am7."
   IO.println s!"Your rules: {repr rules}"
-  if knownConflict ctx rules then
-    IO.println "These rules can never all hold. Change them before playing."
+  if (findCall ctx rules).isNone then
+    IO.println "No call can work with these rules (proven). Change them before playing."
     return
   let proposals : List Phrase := [lowCall, call1]
   for p in proposals do

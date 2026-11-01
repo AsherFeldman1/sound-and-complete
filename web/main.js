@@ -210,13 +210,18 @@ async function rulesChanged() {
   const seq = ++conflictSeq;
   const badge = $("conflict");
   try {
-    const { conflict } = await post("/api/conflict", { rules: activeRules() });
+    const { possible } = await post("/api/possible", { rules: activeRules() });
     if (seq !== conflictSeq) return;
     badge.classList.remove("hidden", "bad");
+    const impossible = possible.map((ok, i) => (ok ? null : i + 1)).filter(Boolean);
+    const conflict = impossible.length > 0;
     if (conflict) {
       badge.classList.add("bad");
-      badge.textContent = "No answer could keep all of these";
-      badge.title = "Proven: no answer could keep all of these rules, whatever the call.";
+      badge.textContent = impossible.length === 3
+        ? "Proven impossible: no answer could keep all of these"
+        : `Proven impossible for answer ${impossible.join(" and ")}`;
+      badge.title = "Lean proved that no call, by anyone, can be answered while keeping all of these rules"
+        + (impossible.length === 3 ? "." : ` at answer ${impossible.join(" and ")} of the song.`);
     } else {
       const n = activeRules().length;
       badge.textContent = n ? `${n} of ${RULES.length} on` : "All off: free play";
@@ -413,25 +418,38 @@ async function prepare() {
   }
   S.session = session;
   $("prepMsg").textContent = "Your calls are ready";
-  $("prepSource").textContent = session.llm
-    ? (session.llmError ? `Claude couldn't be reached, so these calls come from the built-in generator.` : "Claude wrote these calls.")
-    : "These calls come from the built-in generator (no Claude API key is set). Lean checks them the same way.";
+  // Proof first: if some exchange can't be answered by any call, say so and stop.
+  if (session.exchanges.some((x) => !x.possible)) {
+    $("prepMsg").textContent = "These rules can't be kept";
+    $("prepSource").textContent = "Lean proved that no call, by Claude or anyone, has an answer that keeps all of these rules where marked. Turn a rule off or loosen one, then try again.";
+    for (const x of session.exchanges) {
+      const item = el("div", "prep-item");
+      const left = el("div");
+      left.append(el("div", "what", `Answer ${x.exchange + 1}`));
+      left.append(x.possible
+        ? el("div", "note check", "Possible")
+        : el("div", "note bad", "Proven impossible: no call can be answered here"));
+      item.append(left);
+      $("prepList").append(item);
+    }
+    return;
+  }
+  const fromProof = session.exchanges.filter((x) => x.source === "proof").length;
+  $("prepSource").textContent = !session.llm
+    ? "No Claude API key is set, so each call is the one Lean's proof found."
+    : session.llmError ? "Claude couldn't be reached, so each call is the one Lean's proof found."
+    : fromProof ? "Claude wrote these calls, except where marked." : "Claude wrote these calls.";
   for (const x of session.exchanges) {
     const item = el("div", "prep-item");
     const left = el("div");
     left.append(el("div", "what", `Call ${x.exchange + 1}${x.exchange === 2 ? ": turnaround" : ""}`));
-    const rejectedClaude = x.rejected.filter((r) => r.source === "claude").length;
-    if (x.call === null) left.append(el("div", "note", "No call could be answered under these rules."));
-    else left.append(el("div", "note check", "Lean found an answer"));
-    if (rejectedClaude) left.append(el("div", "note", `${rejectedClaude} unanswerable ${rejectedClaude === 1 ? "call" : "calls"} thrown out`));
-    item.append(left, x.call ? miniGrid(x.call) : el("div", "note", "-"));
+    left.append(el("div", "note check", "Lean found an answer"));
+    if (x.claudeRejected) left.append(el("div", "note", `Lean turned down ${x.claudeRejected} of Claude's calls: they had no answer`));
+    if (x.source === "proof" && session.llm && !session.llmError) left.append(el("div", "note", "This call comes from Lean's proof"));
+    item.append(left, miniGrid(x.call));
     $("prepList").append(item);
   }
-  if (session.exchanges.every((x) => x.call)) $("go").classList.remove("hidden");
-  else {
-    $("prepMsg").textContent = "These rules are too tight";
-    $("prepSource").textContent = "No call could be answered for every exchange. Turn a rule off or loosen one, then try again.";
-  }
+  $("go").classList.remove("hidden");
 }
 
 // ---------------------------------------------------------------------------

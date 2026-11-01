@@ -14,6 +14,7 @@ open Blues
 
 #spec_surface findAnswer_complete
 #spec_surface chooseCall_safe
+#spec_surface findCall_complete
 
 #audit_axioms ruleChecker_correct
 #audit_axioms grade_correct
@@ -23,6 +24,8 @@ open Blues
 #audit_axioms findAnswer_complete
 #audit_axioms chooseCall_safe
 #audit_axioms chooseCall_rejects_only_bad
-#audit_axioms knownConflict_sound
+#audit_axioms findCall_sound
+#audit_axioms findCall_complete
 #audit_axioms answer1_satisfies
 #audit_axioms echoRhythm_sayLess_conflict
+#audit_axioms rootOnBeat1_avoidA_impossible

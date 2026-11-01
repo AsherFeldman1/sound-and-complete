@@ -51,21 +51,45 @@ example : (Rule.sayLess, true) ∈ grade ctx0 call1 rules1 answer1 := by
 /-- Rules that can never hold together: echo exactly, but play fewer notes. -/
 def conflictRules : List Rule := [.echoRhythm, .sayLess]
 
-/-- The app warns about these rules. -/
-theorem conflictRules_warned : knownConflict ctx0 conflictRules = true := by decide
-
 /-- So the gate rejects `call1` under them. -/
 theorem call1_fails_gate : chooseCall ctx0 conflictRules [call1] = none := by
   have h : callIsGood ctx0 conflictRules call1 = false := by
     cases hc : callIsGood ctx0 conflictRules call1 with
     | false => rfl
     | true =>
-      exact absurd ((callIsGood_iff ctx0 conflictRules call1).mp hc).2
-        (knownConflict_sound ctx0 conflictRules conflictRules_warned call1)
+      exact absurd ⟨call1, (callIsGood_iff ctx0 conflictRules call1).mp hc⟩
+        (echoRhythm_sayLess_impossible ctx0)
   simp [chooseCall, h]
 
 /-- And the "only rejects bad calls" promise applies. -/
 example : ¬ GoodCall ctx0 conflictRules call1 :=
   chooseCall_rejects_only_bad ctx0 conflictRules [call1] call1_fails_gate call1 (by simp)
+
+/-! ## Deciding before you play whether any call can work -/
+
+/-- `call1` is a good call under `rules1`, so `findCall` finds a call. -/
+theorem rules1_possible : (findCall ctx0 rules1).isSome :=
+  findCall_complete ctx0 rules1 ⟨call1, call1_good⟩
+
+/-- What it finds is a good call with a real answer. -/
+example : ∃ call answer, findCall ctx0 rules1 = some (call, answer) ∧
+    GoodCall ctx0 rules1 call ∧ Satisfies ctx0 call rules1 answer := by
+  obtain ⟨⟨call, answer⟩, h⟩ := Option.isSome_iff_exists.mp rules1_possible
+  exact ⟨call, answer, h, findCall_sound ctx0 rules1 call answer h⟩
+
+/-- If no call can work, `findCall` finds nothing (by `findCall_sound`). -/
+theorem findCall_none_of_impossible (ctx : Context) (rules : List Rule)
+    (h : ¬ CallExists ctx rules) : findCall ctx rules = none := by
+  cases hf : findCall ctx rules with
+  | none => rfl
+  | some ca => exact absurd ⟨ca.1, (findCall_sound ctx rules ca.1 ca.2 hf).1⟩ h
+
+/-- "Root on beat 1" plus "never play A", in the first exchange: no call. -/
+example : findCall ctx0 [.avoid 9, .chordToneOnBeat .root 1] = none :=
+  findCall_none_of_impossible _ _ rootOnBeat1_avoidA_impossible
+
+/-- "Echo exactly" plus "say less": no call. -/
+example : findCall ctx0 conflictRules = none :=
+  findCall_none_of_impossible _ _ (echoRhythm_sayLess_impossible ctx0)
 
 end Blues

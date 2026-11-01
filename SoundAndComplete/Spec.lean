@@ -110,4 +110,10 @@ def Answerable (ctx : Context) (call : Phrase) (rules : List Rule) : Prop :=
 def GoodCall (ctx : Context) (rules : List Rule) (call : Phrase) : Prop :=
   Playable call ∧ Answerable ctx call rules
 
+/-- Your rules can be played: at least one call is a good call (playable, with
+an answer that obeys every rule). If this is false, no call can ever work with
+these rules, here in the song. -/
+def CallExists (ctx : Context) (rules : List Rule) : Prop :=
+  ∃ call, GoodCall ctx rules call
+
 end Blues

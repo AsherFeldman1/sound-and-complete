@@ -21,7 +21,7 @@ make bench                  # time the answer search
 
 To have Claude write the calls, put `ANTHROPIC_API_KEY=...` in a `.env` file in the
 project root (it is git-ignored), or set it in your shell, before `make run`.
-Without a key, built-in calls are used; the Lean gate checks them the same way.
+Without a key, each call is the one found by the proven search (`findCall`): always answerable, but plain.
 Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 (link at the top right). "Watch a demo" plays without a guitar.
 
@@ -35,6 +35,12 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
    answers slot by slot, keeping one example per distinct memory
    (`Search.lean`). Two partial answers with the same memory finish the same
    way, so nothing is lost: the search is sound and complete.
+4. **Impossible rules.** Before you play, the app decides whether any call at
+   all could work with your rules (`CallSearch.lean`). A call only matters
+   through its rhythm, its first few notes and its last note, so for each
+   answer one "best" call is enough, and the same search runs over answers.
+   If no call can work, the app says so. There is no list of known bad
+   combinations: the answer comes from proof, for every rule set.
 
 ## Where things are
 
@@ -45,7 +51,9 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 | `SoundAndComplete/SpecExamples.lean` | Proofs that the spec accepts real answers, rejects bad ones, and catches rule conflicts. |
 | `SoundAndComplete/Search.lean` | Generic checkers and the search. |
 | `SoundAndComplete/Checkers.lean` | One checker per rule. |
-| `SoundAndComplete/App.lean` | Answer search, grading, the gate, conflict warnings. |
+| `SoundAndComplete/App.lean` | Answer search, grading, the gate. |
+| `SoundAndComplete/CallSearch.lean` | `findCall`: can any call work with these rules? |
+| `SoundAndComplete/CallSearchProofs.lean` | Why one "best" call per answer is enough. |
 | `SoundAndComplete/Theorems.lean` | **The promises**, each explained in plain words. |
 | `SoundAndComplete/TheoremExamples.lean` | Each promise used on a real call, so none of them is empty. |
 | `SoundAndComplete/Challenge.lean` | The statements alone. Comparator checks that the proofs match them. |
@@ -60,10 +68,10 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 3. **Exact search**: suggested answers are real (`findAnswer_sound`), and none are missed (`findAnswer_complete`).
 4. **Safe gate**: every call the app plays can be answered, whatever the LLM proposes (`chooseCall_safe`).
 5. **Useful gate**: it only rejects calls that are unplayable or can't be answered (`chooseCall_rejects_only_bad`).
-6. **Honest warnings**: "these rules can never all hold" is always true (`knownConflict_sound`).
+6. **Impossible rules, decided**: "no call can work with these rules" is said exactly when it is true. A found call is a real good call with a real answer (`findCall_sound`), and if any call could work, one is found (`findCall_complete`).
 7. **Honest hint**: the "answer that keeps every rule" shown after a song does keep every rule (`isCorrectAnswer_iff`).
 
-The promises hold for all 13 rules, with no `sorry` (`make audit`).
+The promises hold for all 11 rules, with no `sorry` (`make audit`).
 
 The report card judges each rule alone, so silence passes rules that only forbid
 something, such as "never play A". A call or answer the app suggests always has
@@ -99,7 +107,7 @@ If the samples are missing, the band falls back to its built-in synthesized soun
 
 ## Comparator
 
-`SoundAndComplete/Challenge.lean` restates the nine main theorems with no
+`SoundAndComplete/Challenge.lean` restates the ten main theorems with no
 proof; `comparator.json` lists them and allows only the standard axioms
 (`propext`, `Quot.sound`, `Classical.choice`). `make comparator` runs
 `lake check` and `lake comparator` in a Linux container (they need the Linux

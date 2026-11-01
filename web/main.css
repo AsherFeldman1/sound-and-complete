@@ -169,6 +169,7 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
 .combo select, .combo .btn:not(.btn-primary) { background: #1f1d1a; color: #f1ece2; border-color: #000; }
 .combo .btn-primary { background: #5a1d1c; color: #f6ead6; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 2px 0 rgba(0, 0, 0, 0.45); }
 .combo .btn-primary:hover { background: #6d2422; }
+.combo .btn-primary:disabled { background: #8f8a80; color: #d8d3c8; box-shadow: none; cursor: not-allowed; }
 .combo .who { color: #1b1a17; }
 .combo .who.listen { color: #9a5a0c; }
 .combo .who.you { color: #2f46b0; }
@@ -507,3 +508,4 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
 .switch input:checked + .switch-track::after { transform: translateX(14px); background: var(--text); }
 .switch input:focus-visible + .switch-track { outline: 2px solid var(--you); outline-offset: 2px; }
 @media (max-width: 640px) { .fretboard { margin-left: 0; } }
+.prep-item .note.bad { color: #ff8a80; font-weight: 600; }

@@ -56,7 +56,8 @@ elab "#spec_surface " id:ident : command => do
   let names := (specSurface env thm).toList.filter (isWrittenByHand env)
   let tagged := names.filterMap fun c => (ownModule? env c).map (c, ·)
   let isCode (m : Name) :=
-    m == `SoundAndComplete.Search || m == `SoundAndComplete.Checkers || m == `SoundAndComplete.App
+    m == `SoundAndComplete.Search || m == `SoundAndComplete.Checkers ||
+    m == `SoundAndComplete.App || m == `SoundAndComplete.CallSearch
   let spec := (tagged.filter (!isCode ·.2)).map (·.1.toString) |>.toArray.qsort (· < ·)
   let code := (tagged.filter (isCode ·.2)).map (·.1.toString) |>.toArray.qsort (· < ·)
   logInfo m!"{thm}\n  spec (review these): {spec.toList}\n  code (checked by the proof): {code.toList}"

@@ -11,8 +11,9 @@ import SoundAndComplete.Spec
 2. **The spec rejects bad answers.** Every rule that can fail has an answer
    proven to break it.
 
-Plus a limit worth knowing (silence obeys some rules), and a rule pair that can
-never hold together. The app should warn about those before you play.
+Plus a limit worth knowing (silence obeys some rules), and rule sets that can
+never hold together (`¬ CallExists`). The app finds those by proof before you
+play (`findCall` in `CallSearch.lean`).
 -/
 
 namespace Blues
@@ -174,7 +175,7 @@ theorem silence_obeys_avoid : RuleHolds ctx0 call1 (Phrase.ofNotes []) (.avoid 9
   have h : notes (Phrase.ofNotes []) = [] := by decide
   simp [RuleHolds, pitches, h]
 
-/-! ## 5. Rule pairs that can never hold together -/
+/-! ## 5. Rule sets that can never hold together -/
 
 /-- "Echo the rhythm exactly" and "say less" contradict each other, for every
 call: the same note starts means the same number of notes. -/
@@ -185,5 +186,21 @@ theorem echoRhythm_sayLess_conflict (ctx : Context) (call answer : Phrase) :
   have := congrArg List.length h1
   simp at this
   omega
+
+/-- So no call at all can work with these two rules. -/
+theorem echoRhythm_sayLess_impossible (ctx : Context) :
+    ¬ CallExists ctx [.echoRhythm, .sayLess] := by
+  rintro ⟨call, -, answer, -, h⟩
+  exact echoRhythm_sayLess_conflict ctx call answer ⟨h _ (by simp), h _ (by simp)⟩
+
+/-- In the first exchange the chord is Am7, whose root is A. So "play the root
+on beat 1" and "never play A" can never both hold, whatever the call. -/
+theorem rootOnBeat1_avoidA_impossible :
+    ¬ CallExists ctx0 [.avoid 9, .chordToneOnBeat .root 1] := by
+  rintro ⟨call, -, answer, -, h⟩
+  obtain ⟨-, -, p, hp, ht⟩ := h (.chordToneOnBeat .root 1) (by simp)
+  have hA : pitchClass p = 9 := ht
+  exact h (.avoid 9) (by simp) p
+    (by simp only [pitches, List.mem_map]; exact ⟨_, hp, rfl⟩) hA
 
 end Blues

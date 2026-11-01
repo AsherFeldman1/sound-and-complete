@@ -10,7 +10,8 @@
     "Blues.findAnswer_complete",
     "Blues.chooseCall_safe",
     "Blues.chooseCall_rejects_only_bad",
-    "Blues.knownConflict_sound"
+    "Blues.findCall_sound",
+    "Blues.findCall_complete"
   ],
   "definition_names": [],
   "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"]

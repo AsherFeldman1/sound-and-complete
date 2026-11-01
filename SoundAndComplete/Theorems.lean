@@ -1,5 +1,4 @@
-import SoundAndComplete.App
-import SoundAndComplete.CheckerProofs
+import SoundAndComplete.CallSearchProofs
 
 /-!
 # The main theorems
@@ -11,12 +10,13 @@ These are the promises the app makes to the player. Each one has:
 * **What it does not say**: the limits, so nobody over-reads it.
 
 The statements use the spec (`Music.lean`, `Spec.lean`) and the code being
-checked (`Search.lean`, `Checkers.lean`, `App.lean`). If you agree with the
-spec and with these statements, you can trust the app without reading any proof.
+checked (`Search.lean`, `Checkers.lean`, `App.lean`, `CallSearch.lean`). If you
+agree with the spec and with these statements, you can trust the app without
+reading any proof.
 
 The LLM is not trusted anywhere. It only proposes calls; `chooseCall` decides.
 
-The promises cover all 13 rules, for every value of their settings. Each one is
+The promises cover all 11 rules, for every value of their settings. Each one is
 also tried on a real example in `TheoremExamples.lean`.
 -/
 
@@ -202,65 +202,74 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
   rw [(callIsGood_iff ctx rules call).mpr hgood] at this
   exact this rfl
 
-/-! ## 5. Warning about impossible rules -/
+/-! ## 5. Impossible rules: decided before you play -/
 
-/-- **In plain words:** when the app warns "these rules can never all hold",
-that is true: no call at all could be answered.
+/-- **In plain words:** if `findCall` returns a call and an answer, the call is
+one the app may play (playable, with an answer), and that answer obeys every
+rule against it.
 
-**Why you care:** it catches mistakes like "echo the rhythm exactly" plus "say
-less" before you start playing.
+**Why you care:** when the app says "your rules can be played", it holds the
+proof in hand: a real call and a real answer. -/
+theorem findCall_sound (ctx : Context) (rules : List Rule) (call answer : Phrase) :
+    findCall ctx rules = some (call, answer) →
+      GoodCall ctx rules call ∧ Satisfies ctx call rules answer := by
+  intro h
+  unfold findCall at h
+  split at h
+  · cases h
+  obtain ⟨s, -, hs⟩ := List.exists_of_findSome?_eq_some h
+  simp only at hs
+  cases hsr : search (bestCallChecker ctx rules s) phraseSlots with
+  | none => rw [hsr] at hs; cases hs
+  | some a =>
+    rw [hsr] at hs
+    simp only at hs
+    split at hs
+    · rename_i hok
+      simp only [Option.some.injEq, Prod.mk.injEq] at hs
+      obtain ⟨rfl, rfl⟩ := hs
+      simp only [Bool.and_eq_true] at hok
+      have hsat := (isCorrectAnswer_iff ctx _ rules a).mp hok.2
+      exact ⟨⟨(isPlayable_iff _).mp hok.1, a, hsat⟩, hsat⟩
+    · cases hs
 
-**What it does not say:** that every impossible rule set gets a warning. Some
-impossible combinations depend on the call. Those are caught by the gate during
-play instead. -/
-theorem knownConflict_sound (ctx : Context) (rules : List Rule) :
-    knownConflict ctx rules = true → ∀ call, ¬ Answerable ctx call rules := by
-  intro h call ⟨answer, hplay, hrules⟩
-  -- Every playable answer has a note.
-  obtain ⟨⟨s, p⟩, hsp⟩ := List.exists_mem_of_ne_nil _ hplay.2.1
-  have hslot := (notesFrom_slot_range 0 answer s p hsp).2
-  rw [hplay.1] at hslot
-  have hguitar : OnGuitar p := hplay.2.2 p (by simp only [pitches, List.mem_map]; exact ⟨_, hsp, rfl⟩)
-  simp only [OnGuitar, guitarLow, guitarHigh] at hguitar
-  simp only [knownConflict, Bool.or_eq_true, List.any_eq_true, Bool.and_eq_true,
-    List.contains_iff_mem] at h
-  rcases h with ⟨r, hr, himp⟩ | ⟨hecho, hless⟩
-  · have hholds := hrules r hr
-    cases r <;> simp only [Rule.impossibleAlone, Bool.false_eq_true] at himp
-    case chordToneOnBeat t b =>
-      obtain ⟨h1, h2, -⟩ := hholds
-      simp_all
-    case stayBetween low high =>
-      have := hholds p (by simp only [pitches, List.mem_map]; exact ⟨_, hsp, rfl⟩)
-      simp only [Bool.or_eq_true, decide_eq_true_eq, guitarLow, guitarHigh] at himp
-      have key : ∀ a b c : Nat, (b < a ∨ b < 40 ∨ 88 < a) → 40 ≤ c → c ≤ 88 → a ≤ c → c ≤ b →
-          False := by omega
-      have himp' : high < low ∨ high < 40 ∨ 88 < low := by
-        rcases himp with (h | h) | h
-        · exact Or.inl h
-        · exact Or.inr (Or.inl (of_decide_eq_true h))
-        · exact Or.inr (Or.inr (of_decide_eq_true h))
-      exact key low high p himp' hguitar.1 hguitar.2 this.1 this.2
-    case maxNotesPerBar n =>
-      simp only [beq_iff_eq] at himp
-      subst himp
-      obtain ⟨h1, h2⟩ := hholds
-      simp only [Nat.le_zero, List.length_eq_zero_iff, List.filter_eq_nil_iff,
-        decide_eq_true_eq] at h1 h2
-      have a1 := h1 _ hsp
-      have a2 := h2 _ hsp
-      simp only [slotsPerBar] at a1 a2
-      omega
-    case leaveSpace k =>
-      simp only [decide_eq_true_eq] at himp
-      have := hholds s p hsp
-      simp only [phraseSlots] at himp hslot
-      omega
-  · have h1 := hrules _ hecho
-    have h2 := hrules _ hless
-    simp only [RuleHolds, onsetSlots] at h1 h2
-    have := congrArg List.length h1
-    simp at this
-    omega
+/-- **In plain words:** if any call at all could work with your rules,
+`findCall` finds one. So when it finds none, the rules are impossible: no call
+the LLM could ever write would let you answer.
+
+**Why you care:** the app warns "these rules can't all hold" exactly when this
+is true. There is no list of known bad combinations; the warning is decided by
+proof, for every rule set.
+
+**What it does not say:** that the call it finds sounds good. It is only
+evidence. The calls you hear still come from the LLM, through the gate. -/
+theorem findCall_complete (ctx : Context) (rules : List Rule) :
+    CallExists ctx rules → (findCall ctx rules).isSome := by
+  rintro ⟨c, hc, a, ha⟩
+  -- The quick test passes `a`, so it finds some answer.
+  have hq := search_complete (quickChecker ctx rules) phraseSlots
+    (quickChecker_deadIsFinal ctx rules)
+    ⟨a, ha.1.1, playable_in_alphabet a ha.1, quickChecker_complete ctx rules c a hc ha⟩
+  have hnone : (search (quickChecker ctx rules) phraseSlots).isNone = false := by
+    cases h : search (quickChecker ctx rules) phraseSlots with
+    | none => rw [h] at hq; cases hq
+    | some _ => rfl
+  -- One of the shifts works.
+  obtain ⟨s, hs, hacc⟩ := bestCallChecker_complete ctx rules c a hc ha
+  have hsome := search_complete (bestCallChecker ctx rules s) phraseSlots
+    (bestCallChecker_deadIsFinal ctx rules s)
+    ⟨a, ha.1.1, playable_in_alphabet a ha.1, hacc⟩
+  obtain ⟨a', ha'⟩ := Option.isSome_iff_exists.mp hsome
+  obtain ⟨hlen', hacc'⟩ := search_sound _ _ _ ha'
+  obtain ⟨hpa, hpc, hrules⟩ :=
+    bestCallChecker_sound ctx rules s a' hlen' (callShifts_ne_zero rules s hs) hacc'
+  have h1 : isPlayable (bestCall rules s a') = true := (isPlayable_iff _).mpr hpc
+  have h2 : isCorrectAnswer ctx (bestCall rules s a') rules a' = true :=
+    (isCorrectAnswer_iff ctx _ rules a').mpr ⟨hpa, hrules⟩
+  unfold findCall
+  simp only [hnone, Bool.false_eq_true, ↓reduceIte]
+  rw [List.findSome?_isSome_iff]
+  refine ⟨s, hs, ?_⟩
+  simp only [ha', h1, h2, Bool.and_self, ↓reduceIte, Option.isSome_some]
 
 end Blues

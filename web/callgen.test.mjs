@@ -1,11 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { generateCalls } from "./callgen.js";
+import { generateCall, rng } from "./callgen.js";
 import { notesToPhrase } from "./llm.js";
 import { RULES, defaultRule, describeRule } from "./rules.js";
 
-test("built-in calls are 24 slots, have notes, and stay on the guitar", () => {
-  for (const call of generateCalls(200, 42)) {
+test("lick shapes are 24 slots, have notes, and stay on the guitar", () => {
+  const rand = rng(42);
+  for (const call of Array.from({ length: 200 }, () => generateCall(rand))) {
     assert.equal(call.length, 24);
     const notes = call.filter((x) => x !== null);
     assert.ok(notes.length >= 1);
@@ -14,7 +15,8 @@ test("built-in calls are 24 slots, have notes, and stay on the guitar", () => {
 });
 
 test("same seed, same calls", () => {
-  assert.deepEqual(generateCalls(5, 7), generateCalls(5, 7));
+  const five = (seed) => { const r = rng(seed); return Array.from({ length: 5 }, () => generateCall(r)); };
+  assert.deepEqual(five(7), five(7));
 });
 
 test("LLM notes to phrase: drops bad slots and duplicates, keeps odd pitches for the gate", () => {

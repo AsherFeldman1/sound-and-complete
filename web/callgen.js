@@ -88,12 +88,6 @@ export function byTaste(calls) {
   return calls.map((c, i) => [tasteScore(c), i, c]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
 }
 
-/** `n` calls from a seed. */
-export function generateCalls(n, seed = Date.now()) {
-  const rand = rng(seed);
-  return Array.from({ length: n }, () => generateCall(rand));
-}
-
 // ---------------------------------------------------------------------------
 // Answer ideas. The Lean grader decides which of these keep the rules; this
 // only proposes musical candidates, most idiomatic first.

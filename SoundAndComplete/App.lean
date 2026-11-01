@@ -7,7 +7,8 @@ import SoundAndComplete.Checkers
 * `checkRule` and `grade`: judge what you played.
 * `isCorrectAnswer`: does a suggested answer keep every rule?
 * `chooseCall`: the gate. Pick the first LLM-proposed call you can answer.
-* `knownConflict`: warn about rule sets that can never be satisfied.
+* `findCall` (in `CallSearch.lean`): before you play, decide whether any call
+  at all can work with your rules.
 -/
 
 namespace Blues
@@ -46,20 +47,5 @@ def callIsGood (ctx : Context) (rules : List Rule) (call : Phrase) : Bool :=
 you can answer. `none` means: ask the LLM again. -/
 def chooseCall (ctx : Context) (rules : List Rule) (proposals : List Phrase) : Option Phrase :=
   proposals.find? (callIsGood ctx rules)
-
-/-- One rule that can never be satisfied on its own, at this point in the song. -/
-def Rule.impossibleAlone (_ctx : Context) : Rule → Bool
-  | .chordToneOnBeat _ b => !(1 ≤ b && b ≤ 8)
-  | .stayBetween low high => high < low || high < guitarLow || guitarHigh < low
-  | .maxNotesPerBar n => n == 0
-  | .leaveSpace k => phraseSlots ≤ k
-  | _ => false
-
-/-- A quick warning before you play: these rules can never all hold, whatever
-the call. This catches common mistakes, not every impossible rule set. When it
-says nothing, the gate still protects you during play. -/
-def knownConflict (ctx : Context) (rules : List Rule) : Bool :=
-  rules.any (·.impossibleAlone ctx) ||
-  (rules.contains .echoRhythm && rules.contains .sayLess)
 
 end Blues

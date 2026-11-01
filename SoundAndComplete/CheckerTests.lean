@@ -1,4 +1,4 @@
-import SoundAndComplete.App
+import SoundAndComplete.CallSearch
 import SoundAndComplete.SpecExamples
 
 /-!
@@ -85,8 +85,30 @@ def rulesHigh : List Rule := [.startNear 2, .stayBetween 52 64]
 
 #guard grade ctx0 call1 [.sayLess, .sequence 2] answer1 == [(.sayLess, true), (.sequence 2, true)]
 #guard grade ctx0 call1 [.sayLess, .leaveSpace 6] answer1 == [(.sayLess, true), (.leaveSpace 6, false)]
-#guard knownConflict ctx0 [.echoRhythm, .maxLeap 3, .sayLess]
-#guard knownConflict ctx0 [.chordToneOnBeat .third 0]
-#guard !knownConflict ctx0 rules1
+
+/-! ## Can any call work? (`findCall`) -/
+
+/-- The call and answer `findCall` returns really pass the proven checks. -/
+def foundIsGood (ctx : Context) (rules : List Rule) : Bool :=
+  match findCall ctx rules with
+  | some (call, answer) => isPlayable call && isCorrectAnswer ctx call rules answer
+  | none => false
+
+#guard foundIsGood ctx0 rules1
+#guard foundIsGood ctx0 [.startNear 2, .maxLeap 5, .chordToneOnBeat .third 5, .leaveSpace 3]
+-- Echo exactly with a sequence: the best call's last note must be near the start.
+#guard foundIsGood ctx0 [.echoRhythm, .sequence 3, .startNear 0, .maxLeap 2]
+-- Proven impossible in `SpecExamples.lean`:
+#guard findCall ctx0 [.echoRhythm, .sayLess] == none
+#guard findCall ctx0 [.echoRhythm, .maxLeap 3, .sayLess] == none
+#guard findCall ctx0 [.avoid 9, .chordToneOnBeat .root 1] == none
+-- An out-of-range beat can never hold.
+#guard findCall ctx0 [.chordToneOnBeat .third 0] == none
+-- Root on beat 5 while avoiding A: in exchanges 0 and 1, beat 5 of the answer
+-- is over Am7 (bars 4 and 8), whose root is A. Impossible.
+#guard findCall ⟨0⟩ [.avoid 9, .chordToneOnBeat .root 5] == none
+#guard findCall ⟨1⟩ [.avoid 9, .chordToneOnBeat .root 5] == none
+-- In the turnaround, beat 5 is over E7, whose root is E: possible.
+#guard foundIsGood ⟨2⟩ [.avoid 9, .chordToneOnBeat .root 5]
 
 end Blues

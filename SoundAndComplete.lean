@@ -4,6 +4,8 @@ import SoundAndComplete.SpecExamples
 import SoundAndComplete.Search
 import SoundAndComplete.Checkers
 import SoundAndComplete.App
+import SoundAndComplete.CallSearch
+import SoundAndComplete.CallSearchProofs
 import SoundAndComplete.CheckerProofs
 import SoundAndComplete.Theorems
 import SoundAndComplete.TheoremExamples

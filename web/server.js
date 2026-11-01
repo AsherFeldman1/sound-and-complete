@@ -3,8 +3,8 @@
 //
 // API (JSON in, JSON out):
 //   GET  /api/status                 -> {llm: bool}
-//   POST /api/conflict {rules}       -> {conflict}        (proven warning)
-//   POST /api/session  {rules}       -> {exchanges: [...]} (LLM calls, proven gate, hint)
+//   POST /api/possible {rules}       -> {possible: [bool x 3]} (proven: can any call be answered?)
+//   POST /api/session  {rules}       -> {exchanges: [...]} (proof first, then LLM calls through the proven gate)
 //   POST /api/grade    {rules, exchanges:[{call, played}]} -> {results: [[bool...] x 3]}
 // Every decision comes from the Lean program (lean.js). The LLM only proposes.
 // localhost counts as a secure context, so getUserMedia (mic access) works.
@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import { LeanBridge } from "./lean.js";
 import { proposeCalls, llmConfigured } from "./llm.js";
-import { generateCalls, answerIdeas, byTaste } from "./callgen.js";
+import { answerIdeas, byTaste } from "./callgen.js";
 import { CHORDS, CHORD_PCS, EXCHANGES } from "./rules.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -63,26 +63,17 @@ function sendJson(res, status, obj) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" }).end(body);
 }
 
-/** Gate one exchange: try the candidates in order, the proven gate picks. */
-async function gateExchange(exchange, rules, llmCandidates) {
-  const tries = [
-    // Most lick-like first (tasteScore). Order only: the Lean gate still decides.
-    { source: "claude", calls: byTaste(llmCandidates) },
-    { source: "built-in", calls: byTaste(generateCalls(8)) },
-    { source: "built-in", calls: byTaste(generateCalls(32)) },
-  ];
-  const rejected = [];
-  for (const { source, calls } of tries) {
-    if (!calls.length) continue;
-    const r = await lean.request({ op: "gate", exchange, rules, proposals: calls });
-    if (r.chosen !== null) {
-      rejected.push(...calls.slice(0, r.chosen).map((c) => ({ source, call: c })));
-      const call = calls[r.chosen];
-      return { exchange, call, hint: await musicalAnswer(exchange, rules, call, r.hint), source, rejected };
-    }
-    rejected.push(...calls.map((c) => ({ source, call: c })));
-  }
-  return { exchange, call: null, hint: null, source: null, rejected };
+/** Can any call be answered here? Proven sound and complete in Lean
+ * (`findCall`). When yes, Lean also gives a call and an answer to it. */
+const possible = (exchange, rules) => lean.request({ op: "possible", exchange, rules });
+
+/** Gate Claude's calls for one exchange: the proven gate picks the first one
+ * that can be answered (most lick-like first; order only). */
+async function gateClaude(exchange, rules, candidates) {
+  const calls = byTaste(candidates ?? []);
+  if (!calls.length) return { chosen: null, rejected: 0 };
+  const r = await lean.request({ op: "gate", exchange, rules, proposals: calls });
+  return r.chosen === null ? { chosen: null, rejected: calls.length } : { chosen: calls[r.chosen], hint: r.hint, rejected: r.chosen };
 }
 
 /** A musical answer that keeps every rule: the first idea the Lean grader
@@ -143,27 +134,45 @@ async function api(req, res, urlPath) {
     return sendJson(res, 200, { id });
   }
 
-  if (urlPath === "/api/conflict") {
-    const r = await lean.request({ op: "conflict", exchange: 0, rules });
-    // The warning can depend on the exchange (turnaround rules): check all three.
-    let conflict = r.conflict;
-    for (const e of [1, 2]) conflict ||= (await lean.request({ op: "conflict", exchange: e, rules })).conflict;
-    return sendJson(res, 200, { conflict });
+  if (urlPath === "/api/possible") {
+    const out = [];
+    for (const e of [0, 1, 2]) out.push((await possible(e, rules)).possible);
+    return sendJson(res, 200, { possible: out });
   }
 
   if (urlPath === "/api/session") {
-    let llmCalls = [[], [], []];
+    // 1. Proof first: for each exchange, can any call be answered at all?
+    const proofs = [];
+    for (const e of [0, 1, 2]) proofs.push(await possible(e, rules));
+    const exchanges = proofs.map((p, e) => ({ exchange: e, possible: p.possible, call: null, hint: null, source: null, claudeRejected: 0 }));
+    if (proofs.some((p) => !p.possible)) return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmError: null });
+
+    // 2. Claude writes calls; the proven gate keeps one it can answer. If none
+    //    of Claude's calls can be answered, ask once more.
     let llmError = null;
-    if (llmConfigured()) {
-      try {
-        llmCalls = await proposeCalls(rules);
-      } catch (e) {
+    const ask = async () => {
+      if (!llmConfigured()) return [[], [], []];
+      try { return await proposeCalls(rules); } catch (e) {
         llmError = String(e.message || e);
-        console.warn(`LLM failed, using built-in calls: ${llmError}`);
+        console.warn(`LLM failed: ${llmError}`);
+        return [[], [], []];
+      }
+    };
+    for (let attempt = 0; attempt < 2 && exchanges.some((x) => !x.call); attempt++) {
+      if (attempt > 0 && llmError) break;
+      const llmCalls = await ask();
+      for (const x of exchanges) {
+        if (x.call) continue;
+        const g = await gateClaude(x.exchange, rules, llmCalls[x.exchange]);
+        x.claudeRejected += g.rejected;
+        if (g.chosen) Object.assign(x, { call: g.chosen, hint: g.hint, source: "claude" });
       }
     }
-    const exchanges = [];
-    for (const e of [0, 1, 2]) exchanges.push(await gateExchange(e, rules, llmCalls[e]));
+    // 3. Still nothing from Claude: play the call the proof itself found.
+    for (const x of exchanges) {
+      if (!x.call) Object.assign(x, { call: proofs[x.exchange].call, hint: proofs[x.exchange].answer, source: "proof" });
+      x.hint = await musicalAnswer(x.exchange, rules, x.call, x.hint);
+    }
     return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmError });
   }
 

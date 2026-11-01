@@ -1,4 +1,4 @@
-import SoundAndComplete.App
+import SoundAndComplete.CallSearch
 
 /-!
 # Challenge: the statements Comparator checks
@@ -55,8 +55,13 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   sorry
 
-theorem knownConflict_sound (ctx : Context) (rules : List Rule) :
-    knownConflict ctx rules = true → ∀ call, ¬ Answerable ctx call rules := by
+theorem findCall_sound (ctx : Context) (rules : List Rule) (call answer : Phrase) :
+    findCall ctx rules = some (call, answer) →
+      GoodCall ctx rules call ∧ Satisfies ctx call rules answer := by
+  sorry
+
+theorem findCall_complete (ctx : Context) (rules : List Rule) :
+    CallExists ctx rules → (findCall ctx rules).isSome := by
   sorry
 
 end Blues

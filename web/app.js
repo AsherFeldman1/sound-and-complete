@@ -34,6 +34,15 @@ function loadStore() {
     return {};
   }
 }
+/** Save the mic latency, both as the current value and for this input by name,
+ * so each input (wireless mic, audio interface...) keeps its own calibration. */
+function saveMicLatency(ms) {
+  const label = S.stream?.getAudioTracks()[0]?.label;
+  const byDevice = { ...(loadStore().latencyByDevice || {}) };
+  if (label) byDevice[label] = ms;
+  saveStore({ latencyMicMs: ms, latencyByDevice: byDevice });
+}
+
 function saveStore(patch) {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({ ...loadStore(), ...patch }));
@@ -170,13 +179,20 @@ async function enableMic(deviceId) {
     `echoCancellation ${st.echoCancellation} · noiseSuppression ${st.noiseSuppression} · autoGainControl ${st.autoGainControl}`;
   await refreshDevices(st.deviceId);
   // First time: device names only appear after permission. If we opened the
-  // default input but a DJI receiver is plugged in, switch to it.
+  // default input but a guitar interface or DJI receiver is plugged in, switch to it.
   if (!deviceId) {
     const inputs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === "audioinput");
-    const dji = inputs.find((d) => /dji|wireless mic|mic rx|mic 3/i.test(d.label));
-    if (dji && dji.deviceId !== st.deviceId) return enableMic(dji.deviceId);
+    const pick = preferredInput(inputs);
+    if (pick && pick.deviceId !== st.deviceId) return enableMic(pick.deviceId);
   }
   status(`Mic on: <b>${track.label || "default"}</b>. Pluck a note and check the note display.`, "ok");
+}
+
+/** The input to use when the player has not picked one: a guitar audio
+ * interface first, then the DJI wireless mic. Same rule as the main app. */
+function preferredInput(inputs) {
+  return inputs.find((d) => /irig|scarlett|focusrite|audient|\bid\d|motu|presonus|steinberg|\bur\d|umc|behringer|apollo|universal audio|ssl \d|arturia|minifuse|guitar|instrument|line 6|helix|boss|katana|zoom|tascam|roland/i.test(d.label))
+    || inputs.find((d) => /dji|wireless mic|mic rx|mic 3/i.test(d.label));
 }
 
 async function refreshDevices(selectedId) {
@@ -194,8 +210,8 @@ async function refreshDevices(selectedId) {
   if (keep && inputs.some((d) => d.deviceId === keep)) sel.value = keep;
   // Hint: preselect the DJI receiver if present and nothing chosen yet.
   if (!keep) {
-    const dji = inputs.find((d) => /dji|wireless mic|mic rx|mic 3/i.test(d.label));
-    if (dji) sel.value = dji.deviceId;
+    const pick = preferredInput(inputs);
+    if (pick) sel.value = pick.deviceId;
   }
 }
 
@@ -495,7 +511,7 @@ async function calibrate() {
     const mad = [...offsets.map((o) => Math.abs(o - med))].sort((a, b) => a - b)[Math.floor(offsets.length / 2)];
     const ms = Math.round(med * 1000);
     S.latencyMs[activeLatencyKey()] = ms;
-    if (activeLatencyKey() === "mic") saveStore({ latencyMicMs: ms });
+    if (activeLatencyKey() === "mic") saveMicLatency(ms);
     updateLatencyUI();
     $("calibResult").textContent =
       `offsets (ms): ${offsets.map((o) => Math.round(o * 1000)).join(", ")}  ->  median ${ms} ms, spread (MAD) ${Math.round(mad * 1000)} ms` +
@@ -584,7 +600,7 @@ function init() {
   $("latency").addEventListener("change", () => {
     const v = Math.round(Number($("latency").value) || 0);
     S.latencyMs[activeLatencyKey()] = v;
-    if (activeLatencyKey() === "mic") saveStore({ latencyMicMs: v });
+    if (activeLatencyKey() === "mic") saveMicLatency(v);
   });
 
   $("calibrate").addEventListener("click", () => calibrate().catch((e) => status(e.message, "err")));

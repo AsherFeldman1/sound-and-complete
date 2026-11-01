@@ -13,12 +13,14 @@ an answerable one.
 ```
 make install && make run    # build, then open the app at http://localhost:8765
 make audit                  # what each theorem depends on, and its axioms
+make comparator             # lake check + lake comparator in Docker (needs Docker)
 make test                   # browser-side tests (audio pipeline, call generator)
 make demo                   # terminal demo of the Lean core
 make bench                  # time the answer search
 ```
 
-To have Claude write the calls, set `ANTHROPIC_API_KEY` before `make run`.
+To have Claude write the calls, put `ANTHROPIC_API_KEY=...` in a `.env` file in the
+project root (it is git-ignored), or set it in your shell, before `make run`.
 Without a key, built-in calls are used; the Lean gate checks them the same way.
 Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 (link at the top right). "Watch a demo" plays without a guitar.
@@ -86,3 +88,13 @@ Pick the instruments on the **Band sounds** page (`/sounds.html`).
 - "Old" sounds: [tonejs-instruments](https://github.com/nbrosowsky/tonejs-instruments) by Nicholas Brosowsky (no license stated) and the [Tone.js audio](https://github.com/Tonejs/audio) drum kits.
 
 If the samples are missing, the band falls back to its built-in synthesized sounds.
+
+## Comparator
+
+`SoundAndComplete/Challenge.lean` restates the seven main theorems with no
+proof; `comparator.json` lists them and allows only the standard axioms
+(`propext`, `Quot.sound`, `Classical.choice`). `make comparator` runs
+`lake check` and `lake comparator` in a Linux container (they need the Linux
+`bwrap` sandbox). Both pass, and `comparator/run.sh --paranoid` also passes on
+every bundled kernel: Lean default and paranoid, lean4lean, nanoda, con-leche
+and con-ron.

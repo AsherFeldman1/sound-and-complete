@@ -8,12 +8,12 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23161616'/><circle cx='50' cy='50' r='26' fill='%23c92a1e'/></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Bowlby+One+SC&family=Courier+Prime:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,800&family=Gloock&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Limelight&family=Righteous&family=Rye&family=Shrikhand&family=Unbounded:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Bowlby+One+SC&family=Courier+Prime:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,800&family=Gloock&family=Kalam:wght@400;700&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Limelight&family=Righteous&family=Rye&family=Shrikhand&family=Unbounded:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="main.css">
 </head>
 <body>
 <header class="top">
-  <h1 class="title">Finish AI's Licks</h1>
+  <h1 class="title">AL's Licks</h1>
   <nav>
     <a href="sounds.html">Band sounds</a>
     <a href="lab.html">Input lab</a>
@@ -47,6 +47,10 @@
       </div>
       <div class="ctl knob-wrap"><input type="range" id="bpm" min="60" max="110" value="80" aria-label="Tempo"><span class="silk">Tempo</span><b class="knob-val"><span id="bpmVal">80</span> bpm</b></div>
       <div class="ctl knob-wrap"><input type="range" id="bandVol" min="0" max="100" value="70" aria-label="Band volume"><span class="silk">Band</span><b class="knob-val"><span id="bandVolVal">70</span>%</b></div>
+      <!-- The amp: your guitar, out loud, through a simulated tube amp -->
+      <div class="ctl knob-wrap"><input type="range" id="ampDrive" min="0" max="100" value="40" aria-label="Amp drive"><span class="silk">Drive</span><b class="knob-val" id="ampDriveVal">4</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="ampTone" min="0" max="100" value="55" aria-label="Amp tone"><span class="silk">Tone</span><b class="knob-val" id="ampToneVal">5.5</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="ampVol" min="0" max="100" value="60" aria-label="Guitar volume"><span class="silk">Guitar</span><b class="knob-val" id="ampVolVal">6</b></div>
       <div class="ctl ctl-mode">
         <span class="silk">Mode</span>
         <div class="toggle" role="radiogroup" aria-label="Mode">
@@ -67,10 +71,10 @@
 
   <section class="board-wrap">
     <div class="board-head">
-      <h2>Your rules <span class="hint">Stomp a pedal to turn its rule on. Turn the knobs to change it.</span></h2>
+      <h2>Your rules <span class="board-tape">stomp to switch on · twist knobs to tweak</span></h2>
       <span id="conflict" class="status hidden"></span>
     </div>
-    <div id="ruleList" class="board"></div>
+    <div class="board-outer"><div id="ruleList" class="board"></div></div>
   </section>
 </main>
 

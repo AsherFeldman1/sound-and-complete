@@ -34,7 +34,15 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body { background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.16) 0 1px, transparent 1px 3px), repeating-linear-gradient(90deg, rgba(255, 200, 180, 0.03) 0 1px, transparent 1px 2px), var(--bg); background-attachment: fixed; color: var(--text); font: 400 15px/1.5 var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+body { /* Crushed oxblood velvet: a fine pile, plus big soft patches where the nap catches the light */
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='2.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0 0 0 -0.22'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' preserveAspectRatio='none'%3E%3Cfilter id='v' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.0022 0.0045' numOctaves='3' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.17 0 0 0 0 0.2 0.7 0 0 0 -0.32'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23v)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1000' preserveAspectRatio='none'%3E%3Cfilter id='d' x='0' y='0' width='100%25' height='100%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.004 0.0028' numOctaves='2' seed='3'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.8 0 0 0 -0.35'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23d)'/%3E%3C/svg%3E"),
+    radial-gradient(140% 100% at 30% 0%, #461a1e, #2a0d11 55%, #170608);
+  background-size: 160px 160px, cover, cover, cover;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
+  background-attachment: fixed; color: var(--text); font: 400 15px/1.5 var(--sans); min-height: 100vh; -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
 a { color: inherit; }
 code { font: 0.92em var(--type); }
 h1, h2, h3 { margin: 0; font-weight: 500; }
@@ -114,7 +122,9 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
   box-shadow: 0 0 0 3px #a6a6a6, 0 0 0 4px #000; }
 .jewel.on { background: repeating-conic-gradient(rgba(255, 255, 255, 0.14) 0 20deg, rgba(0, 0, 0, 0.14) 20deg 40deg), radial-gradient(circle at 40% 35%, #ffcfc3, #f2402e 40%, #a8130a 80%);
   box-shadow: 0 0 0 3px #c2c2c2, 0 0 0 4px #000, 0 0 12px 2px rgba(242, 64, 46, 0.5); }
-.ctl-start { margin-left: auto; }
+.ctl-start { margin-left: 0; }
+/* the jewel lamp sits with the start button at the right end of the panel */
+.ctl-pilot { margin-left: auto; }
 .amp-note { margin: 12px 4px 0; }
 .amp-note:empty { display: none; }
 
@@ -194,15 +204,26 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
 
 /* Carpet, like the floor in a rehearsal room */
 .board { --carpet: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='c'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0.55 0 0 0 -0.22'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23c)'/%3E%3C/svg%3E");
-  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 36px 28px; padding: 36px 36px 28px; border-radius: 16px;
-  background: var(--carpet), radial-gradient(120% 90% at 50% 0%, #3b2a20, #221610); box-shadow: inset 0 0 0 1px var(--hair), inset 0 0 40px rgba(0, 0, 0, 0.45); }
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 36px 28px; padding: 40px 36px 28px; border-radius: 4px;
+  background: var(--carpet), radial-gradient(120% 90% at 50% 0%, #3b2a20, #221610); box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45), 0 0 0 6px #1a1a1a, 0 0 0 7px #4a4a4a, 0 18px 30px rgba(0, 0, 0, 0.5); }
 .slot { display: flex; flex-direction: column; gap: 12px; }
 .slot.t-box { width: 148px; }
 .slot.t-mini { width: 108px; }
 .slot.t-treadle { width: 170px; }
 .slot.t-wide { width: 214px; }
-.pedal-cap { margin: 0; min-height: 54px; font-size: 12.5px; line-height: 18px; color: #c9b08a; }
-.slot:has(.pedal.on) .pedal-cap { color: var(--text); }
+.slot > .pedal { transform: rotate(var(--tilt, 0deg)) translateY(var(--press, 0px)); }
+.slot > .pedal:active:not(:has(.pk:active)) { --press: 3px; }
+/* The rule, written in marker on a strip of masking tape under the pedal */
+.pedal-cap { align-self: flex-start; margin: 2px 0 0 -4px; padding: 5px 9px 6px; max-width: calc(100% + 8px); transform: rotate(var(--tape-tilt, 0deg));
+  font: 400 14px/17px "Kalam", var(--sans); color: #3a2c1c; background: #e3d6b4;
+  background-image: linear-gradient(90deg, rgba(0, 0, 0, 0.05), transparent 12%, transparent 88%, rgba(0, 0, 0, 0.06));
+  clip-path: polygon(0 2%, 3% 0, 97% 3%, 100% 0, 99% 50%, 100% 97%, 96% 100%, 4% 98%, 0 100%, 1% 50%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); opacity: 0.72; transition: opacity 150ms var(--ease); }
+.slot:has(.pedal.on) .pedal-cap { opacity: 1; }
+.board-tape { display: inline-block; vertical-align: middle; margin-left: 14px; transform: rotate(-1.5deg); padding: 4px 12px 5px;
+  font: 400 15px/1 "Kalam", var(--sans); color: #f2efe8; background: #2b2b2b;
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0 1px, transparent 1px 3px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); }
 
 /* Enclosure: paint (--c) with lighting from above, a bevelled rim and a contact shadow */
 .pedal { --c: #c3261d; --print: #fff; --font: "Bebas Neue"; --size: 32px;
@@ -217,10 +238,16 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
     inset 0 -2px 0 rgba(0, 0, 0, 0.38),
     inset 1.5px 0 0 rgba(255, 255, 255, 0.14),
     inset -1.5px 0 0 rgba(0, 0, 0, 0.24),
-    0 1px 0 rgba(0, 0, 0, 0.7),
-    3px 12px 14px -3px rgba(0, 0, 0, 0.7),
-    0 3px 4px rgba(0, 0, 0, 0.45);
-  transition: filter 180ms var(--ease); }
+    /* the side walls of the metal box, seen from slightly in front */
+    0 1px 0 var(--side), 0 2px 0 var(--side), 0 3px 0 var(--side), 0 4px 0 var(--side), 0 5px 0 var(--side),
+    0 6px 0 var(--side), 0 7px 0 var(--side), 0 8px 0 var(--side), 0 9px 0 var(--side-dark), 0 10px 0 var(--side-dark),
+    0 11px 0 rgba(0, 0, 0, 0.6),
+    /* shadow cast on the velvet */
+    4px 22px 18px -4px rgba(0, 0, 0, 0.75),
+    0 14px 6px -2px rgba(0, 0, 0, 0.5);
+  --side: color-mix(in srgb, var(--c) 58%, #000);
+  --side-dark: color-mix(in srgb, var(--c) 35%, #000);
+  transition: filter 180ms var(--ease), transform 120ms var(--ease), box-shadow 120ms var(--ease); }
 .pedal > * { flex-shrink: 0; }
 .pedal.t-box { height: 248px; }
 .pedal.t-mini { height: 196px; padding-top: 12px; border-radius: 7px; }
@@ -454,7 +481,6 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
 /* Headings in a warm vintage serif; body text stays Instrument Sans */
 .board-head h2, .prep-title, .page-head h1 { font-family: "Fraunces", Georgia, serif; font-weight: 600; font-optical-sizing: auto; letter-spacing: -0.01em; }
 .board-head h2 { font-size: 26px; }
-.board-head h2 .hint { font-family: var(--sans); }
 .prep-title { font-size: 40px; }
 .page-head h1 { font-size: 40px; }
 .who { font-family: "Fraunces", Georgia, serif; font-weight: 600; }

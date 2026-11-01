@@ -1,0 +1,15 @@
+{
+  "challenge_module": "SoundAndComplete.Challenge",
+  "solution_module": "SoundAndComplete.Theorems",
+  "theorem_names": [
+    "Blues.ruleChecker_correct",
+    "Blues.grade_correct",
+    "Blues.findAnswer_sound",
+    "Blues.findAnswer_complete",
+    "Blues.chooseCall_safe",
+    "Blues.chooseCall_rejects_only_bad",
+    "Blues.knownConflict_sound"
+  ],
+  "definition_names": [],
+  "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"]
+}

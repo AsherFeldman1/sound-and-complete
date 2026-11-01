@@ -1,4 +1,4 @@
-.PHONY: install run demo build audit bench test clean
+.PHONY: install run demo build audit comparator bench test clean
 
 # Install the pinned Lean toolchain (via elan) and build everything.
 install:
@@ -28,6 +28,9 @@ build:
 
 # Print what each main theorem depends on, and which axioms its proof uses.
 # `sorryAx` in the output means a proof is not finished.
+comparator:
+	comparator/run.sh
+
 audit:
 	lake build SoundAndComplete.Audit
 	lake env lean SoundAndComplete/Report.lean

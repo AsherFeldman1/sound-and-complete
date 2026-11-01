@@ -11,6 +11,7 @@ import { RULES, NOTE_NAMES, midiName, describeRule, defaultRule, CHORDS, EXCHANG
 import { quantize, PHRASE_SLOTS } from "./audio/quantize.js";
 import { GuitarInput } from "./audio/input.js";
 import { Band } from "./audio/band.js";
+import { GuitarAmp } from "./audio/amp.js";
 import { SOUNDS_KEY } from "./audio/sounds.js";
 import { makeKnob } from "./knob.js";
 import { PEDAL_DESIGNS, ART } from "./pedals.js";
@@ -77,6 +78,8 @@ async function ensureAudio() {
     S.ctx = new AudioContext({ latencyHint: "interactive", sampleRate: 48000 });
     S.band = new Band(S.ctx);
     S.band.volume = Number($("bandVol").value) / 100;
+    S.amp = new GuitarAmp(S.ctx);
+    S.amp.set(ampSettings());
     let sounds = {};
     try { sounds = JSON.parse(localStorage.getItem(SOUNDS_KEY) || "{}"); } catch { /* defaults */ }
     S.samplesReady = S.band.loadSamples(sounds); // recorded instruments (falls back to synth)
@@ -136,6 +139,10 @@ function renderRules() {
     const d = PEDAL_DESIGNS[r.rule] ?? PEDAL_DESIGNS.startNear;
     const slot = el("div", `slot t-${d.type}`);
     slot.dataset.rule = r.rule;
+    // Real boards are never perfectly square: tilt each pedal and its tape label a little.
+    const seed = [...r.rule].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 997, 7);
+    slot.style.setProperty("--tilt", `${((seed % 7) - 3) * 0.45}deg`);
+    slot.style.setProperty("--tape-tilt", `${((seed % 5) - 2) * 0.8}deg`);
     const pedal = el("div", `pedal t-${d.type} f-${d.finish} k-${d.knob}${d.frame ? " framed" : ""}${st.on ? " on" : ""}`);
     pedal.style.setProperty("--c", d.c);
     pedal.style.setProperty("--print", d.print);
@@ -227,14 +234,19 @@ async function enableMic() {
   }
   try {
     const sel = $("device");
-    let chosen = sel.value || loadPrefs().deviceId || undefined;
+    const prefs = loadPrefs();
+    // Use the input the player picked from the list, if any.
+    let chosen = sel.value || (prefs.deviceManual ? prefs.deviceId : undefined) || undefined;
     let label = await S.input.enableMic(chosen);
     // Device names are only visible after mic permission. Now list them, and if
-    // nothing was chosen yet, switch to the DJI receiver when it is plugged in.
+    // the player has not picked one, prefer a guitar audio interface, then the
+    // DJI wireless mic, over the laptop's built-in mic.
     const devices = await S.input.listDevices();
+    const iface = devices.find((d) => /irig|scarlett|focusrite|audient|\bid\d|motu|presonus|steinberg|\bur\d|umc|behringer|apollo|universal audio|ssl \d|arturia|minifuse|guitar|instrument|line 6|helix|boss|katana|zoom|tascam|roland/i.test(d.label));
     const dji = devices.find((d) => /dji|wireless mic|mic rx|mic 3/i.test(d.label));
-    if (!chosen && dji) {
-      chosen = dji.deviceId;
+    const auto = iface || dji;
+    if (!sel.value && !prefs.deviceManual && auto && auto.deviceId !== S.input.stream.getAudioTracks()[0]?.getSettings?.().deviceId) {
+      chosen = auto.deviceId;
       label = await S.input.enableMic(chosen);
     }
     sel.innerHTML = "";
@@ -268,9 +280,57 @@ async function enableMic() {
     $("enableMic").textContent = "Mic on";
     $("pilot").classList.add("on");
     if (!S.meterOn) { S.meterOn = true; meterLoop(); }
+    S.lostInput = null;
+    // Play the guitar out loud through the amp. Only for an audio interface:
+    // with a microphone, the speakers would feed back into it and howl.
+    S.amp.attach(S.input.source);
+    S.ampAllowed = IFACE_RE.test(label);
+    S.amp.set(ampSettings());
+    if (!S.ampAllowed) $("micInfo").append(" The amp stays silent on a microphone so it can't feed back.");
+    // If the input is unplugged (or its USB connection drops), say so plainly,
+    // and reconnect by itself when it comes back (see watchInputs).
+    const track = S.input.stream.getAudioTracks()[0];
+    if (track) track.onended = () => inputLost(label);
   } catch (e) {
     $("micInfo").textContent = `Mic error: ${e.message}`;
   }
+}
+
+/** The input disappeared: the cable came out, or the Mac lost the USB device. */
+function inputLost(label) {
+  S.micReady = false;
+  S.lostInput = label;
+  $("pilot").classList.remove("on");
+  $("enableMic").textContent = "Enable mic";
+  $("micInfo").classList.add("warn");
+  $("micInfo").innerHTML = "";
+  $("micInfo").append(el("b", "", `${label} was disconnected.`),
+    " Check its cable (and any adapter or hub). It reconnects by itself when your Mac sees it again.");
+}
+
+/** When devices change, reconnect a lost input as soon as it is back. */
+async function watchInputs() {
+  if (!S.lostInput || !S.input) return;
+  const back = (await S.input.listDevices()).find((d) => d.label === S.lostInput);
+  if (!back) return;
+  const sel = $("device");
+  if (![...sel.options].some((o) => o.value === back.deviceId)) sel.append(Object.assign(el("option", "", back.label), { value: back.deviceId }));
+  sel.value = back.deviceId;
+  await enableMic();
+}
+navigator.mediaDevices?.addEventListener?.("devicechange", () => watchInputs().catch(() => {}));
+
+/** Names of guitar audio interfaces (a direct line in, so the amp can't feed back). */
+const IFACE_RE = /irig|scarlett|focusrite|audient|\bid\d|motu|presonus|steinberg|\bur\d|umc|behringer|apollo|universal audio|ssl \d|arturia|minifuse|guitar|instrument|line 6|helix|boss|katana|zoom|tascam|roland/i;
+
+/** The amp knobs (0..100) as amp settings (0..1). */
+function ampSettings() {
+  return {
+    drive: Number($("ampDrive").value) / 100,
+    tone: Number($("ampTone").value) / 100,
+    volume: Number($("ampVol").value) / 100,
+    on: Boolean(S.ampAllowed),
+  };
 }
 
 let tunerFreq = 0;
@@ -662,9 +722,23 @@ function init() {
   for (const r of document.querySelectorAll("input[name=mode]")) r.addEventListener("change", syncMode);
   makeKnob($("bpm"));
   makeKnob($("bandVol"));
+  for (const id of ["ampDrive", "ampTone", "ampVol"]) {
+    if (prefs[id] !== undefined) $(id).value = prefs[id];
+    const show = () => { $(`${id}Val`).textContent = String(Math.round(Number($(id).value)) / 10); };
+    show();
+    $(id).addEventListener("input", () => {
+      show();
+      savePrefs({ [id]: Number($(id).value) });
+      S.amp?.set(ampSettings());
+    });
+    makeKnob($(id));
+  }
   syncMode();
   $("enableMic").addEventListener("click", enableMic);
-  $("device").addEventListener("change", () => S.micReady && enableMic());
+  $("device").addEventListener("change", () => {
+    savePrefs({ deviceManual: true }); // the player picked this input: keep it
+    if (S.micReady) enableMic();
+  });
   $("start").addEventListener("click", async () => {
     $("startMsg").textContent = "";
     if (mode() === "mic" && !S.micReady) {

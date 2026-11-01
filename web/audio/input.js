@@ -78,15 +78,28 @@ export class GuitarInput {
     return this.stream.getAudioTracks()[0]?.label || "default input";
   }
 
-  /** True once latency was measured on the lab page. */
+  /** The lab's latency measurement (ms) for the input in use, or undefined.
+   * Each input keeps its own: a wireless mic and a wired interface differ.
+   * (Older saves have one number with no input name; it was measured on the
+   * DJI wireless mic, so it is only used for that.) */
+  get calibratedMs() {
+    const st = loadSettings();
+    const label = this.stream?.getAudioTracks()[0]?.label || "";
+    const v = st.latencyByDevice?.[label];
+    if (Number.isFinite(Number(v))) return Number(v);
+    if (!st.latencyByDevice && st.latencyMicMs !== undefined && /dji|wireless mic|mic rx|mic 3/i.test(label)) return Number(st.latencyMicMs) || 0;
+    return undefined;
+  }
+
+  /** True once latency was measured on the lab page for this input. */
   get calibrated() {
-    return Number.isFinite(Number(loadSettings().latencyMicMs)) && loadSettings().latencyMicMs !== undefined;
+    return this.calibratedMs !== undefined;
   }
 
   /** Latency (seconds): the lab's measurement, or else the browser's own
    * estimate of output delay (it includes Bluetooth headphones on most systems). */
   get latency() {
-    if (this.calibrated) return (Number(loadSettings().latencyMicMs) || 0) / 1000;
+    if (this.calibrated) return this.calibratedMs / 1000;
     return (this.ctx.outputLatency || 0) + (this.ctx.baseLatency || 0) + 0.02;
   }
 

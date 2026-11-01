@@ -10,6 +10,7 @@
 // localhost counts as a secure context, so getUserMedia (mic access) works.
 // PORT env var overrides the port.
 
+import "./env.js"; // must be first: loads .env (API key) before other modules read it
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";

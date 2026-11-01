@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2a1214">
+  <title>Band Sounds</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23161616'/><circle cx='50' cy='50' r='26' fill='%23d4271f'/><circle cx='42' cy='42' r='8' fill='%23ff9a8a'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Bowlby+One+SC&family=Courier+Prime:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,800&family=Gloock&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Limelight&family=Righteous&family=Rye&family=Shrikhand&family=Unbounded:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+<header class="top">
+  <a class="wordmark" href="./">Sound &amp; Complete</a>
+  <nav>
+    <a href="sounds.html" aria-current="page">Band sounds</a>
+    <a href="lab.html">Input lab</a>
+  </nav>
+</header>
+<main class="screen sounds-page">
+  <section class="page-head">
+    <h1>Band sounds</h1>
+    <p class="lede">Click a sound to hear it. Your picks are saved and used in the song.</p>
+  </section>
+  <div id="parts" class="sounds-parts"></div>
+  <div class="sounds-actions">
+    <button id="full" class="btn btn-primary">Hear the whole band</button>
+    <button id="stopAll" class="btn">Stop</button>
+    <a class="btn btn-quiet" href="./">Back to the app</a>
+    <p id="status" class="hint"></p>
+  </div>
+</main>
+<script type="module" src="sounds-page.js"></script>
+</body>
+</html>

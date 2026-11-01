@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sound and Complete: Lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Input lab</h1><p class="sub"><a href="./">&larr; back to the app</a>. Calibrate latency here once per setup; the app uses the saved value.</p>
+  <p class="sub">Blues call &amp; response, A minor shuffle. Play single notes; the answer is turned into a 24-slot phrase.</p>
+  <div id="status" class="status">Click <b>Enable mic</b> (or tick <b>Simulate</b>) to start.</div>
+</header>
+
+<main>
+  <!-- 1. Input -->
+  <section class="card">
+    <h2>1. Input</h2>
+    <div class="row">
+      <label>Device
+        <select id="deviceSelect"><option value="">(enable mic to list devices)</option></select>
+      </label>
+      <button id="enableMic">Enable mic</button>
+      <label class="check"><input type="checkbox" id="simulate"> Simulate (no guitar)</label>
+    </div>
+    <div class="row small" id="trackInfo"></div>
+
+    <div class="live">
+      <div class="note-display">
+        <div id="liveNote" class="big-note">-</div>
+        <div id="liveFreq" class="small">&nbsp;</div>
+      </div>
+      <div class="meter-wrap">
+        <div class="meter" title="Input level (RMS, dBFS). Line = noise gate.">
+          <div id="meterFill" class="meter-fill"></div>
+          <div id="gateMark" class="gate-mark"></div>
+        </div>
+        <div class="row small"><span id="levelText">-inf dB</span><span id="pitchSource"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Settings -->
+  <section class="card">
+    <h2>2. Settings</h2>
+    <div class="grid-form">
+      <label>Tempo (BPM) <input type="number" id="bpm" min="40" max="200" step="1" value="80"></label>
+      <label>Input gain <span class="val" id="gainVal"></span>
+        <input type="range" id="inputGain" min="0" max="30" step="1" value="0"></label>
+      <label>Noise gate <span class="val" id="gateVal"></span>
+        <input type="range" id="gate" min="-75" max="-15" step="1" value="-45"></label>
+      <label>Onset sensitivity (jump) <span class="val" id="ratioVal"></span>
+        <input type="range" id="ratio" min="1.2" max="4" step="0.1" value="1.6"></label>
+      <label>Pitch clarity min <span class="val" id="clarityVal"></span>
+        <input type="range" id="clarity" min="0.7" max="0.98" step="0.01" value="0.9"></label>
+      <label>On-grid tolerance <span class="val" id="tolVal"></span>
+        <input type="range" id="tolerance" min="10" max="125" step="5" value="80"></label>
+      <label>Click volume <span class="val" id="clickVolVal"></span>
+        <input type="range" id="clickVol" min="0" max="1" step="0.05" value="0.8"></label>
+      <label class="check"><input type="checkbox" id="tripletClick"> Soft triplet "let" click (shuffle feel)</label>
+      <label class="check"><input type="checkbox" id="legato" checked> Detect hammer-ons / pull-offs (pitch-change onsets)</label>
+      <label class="check"><input type="checkbox" id="strict"> Strict: drop notes outside tolerance</label>
+    </div>
+  </section>
+
+  <!-- 3. Latency -->
+  <section class="card">
+    <h2>3. Latency calibration</h2>
+    <p class="small">Mute the strings with your fretting hand. After a 1-bar count-in, pluck (a dead "chk") exactly on each of the next <b>8</b> clicks. Use headphones for the clicks if you can.</p>
+    <div class="row">
+      <button id="calibrate">Calibrate</button>
+      <label>Latency (ms) <input type="number" id="latency" step="1" value="0" style="width:6em"></label>
+      <span id="latencyLabel" class="small"></span>
+    </div>
+    <div id="calibResult" class="small mono"></div>
+  </section>
+
+  <!-- 4. Metronome + record -->
+  <section class="card">
+    <h2>4. Record answer</h2>
+    <div class="row">
+      <button id="metroToggle">Start metronome</button>
+      <button id="record" class="primary">Record answer</button>
+      <div id="countIn" class="count-in">&nbsp;</div>
+    </div>
+    <p class="small">One bar of count-in clicks, then 2 bars (24 triplet slots) are recorded.</p>
+
+    <div id="grid" class="phrase-grid" aria-label="24-slot phrase grid"></div>
+
+    <h3>Phrase JSON <button id="copyJson" class="tiny">copy</button></h3>
+    <pre id="jsonOut" class="mono out">[]</pre>
+
+    <h3>Notes</h3>
+    <table id="notesTable" class="notes">
+      <thead><tr><th>#</th><th>note</th><th>MIDI</th><th>slot</th><th>beat</th><th>offset ms</th><th>on grid</th><th>kind</th><th>raw time (s)</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div id="rejected" class="small mono"></div>
+  </section>
+
+  <!-- 5. Simulate -->
+  <section class="card" id="simCard">
+    <h2>5. Simulate</h2>
+    <p class="small">When <b>Simulate</b> is ticked, synthetic plucked tones are fed into the detector instead of the mic.
+      Pattern tokens: <code>slot:midi</code> (pluck), <code>slot:midi~</code> (hammer-on/pull-off, no new attack), <code>slot:-</code> (muted knock). Note names work too (<code>0:A3</code>).</p>
+    <label class="block">Pattern
+      <input type="text" id="simPattern" value="0:E4 2:G4 3:A4 5:G4 6:E4 9:D4 12:C4 14:A3 15:A3 18:C4 19:D4~ 21:E4 23:A4"></label>
+    <div class="row">
+      <label>Timing jitter &plusmn; ms <input type="number" id="simJitter" value="20" min="0" max="120" style="width:5em"></label>
+      <label>Simulated latency ms <input type="number" id="simLatency" value="0" min="0" max="400" style="width:5em"></label>
+      <label>Monitor volume <input type="range" id="simMonitor" min="0" max="1" step="0.05" value="0.5"></label>
+      <button id="simPlayNow">Play pattern now (no recording)</button>
+    </div>
+    <div id="simExpected" class="small mono"></div>
+  </section>
+
+  <!-- 6. Log -->
+  <section class="card">
+    <h2>6. Onset log <button id="clearLog" class="tiny">clear</button></h2>
+    <div id="log" class="log mono"></div>
+  </section>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

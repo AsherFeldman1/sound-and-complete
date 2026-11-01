@@ -1,0 +1,14 @@
+name = "sound-and-complete"
+version = "0.1.0"
+defaultTargets = ["SoundAndComplete", "sound-and-complete"]
+
+[[lean_lib]]
+name = "SoundAndComplete"
+
+[[lean_exe]]
+name = "sound-and-complete"
+root = "Main"
+
+[[lean_exe]]
+name = "bench"
+root = "Bench"

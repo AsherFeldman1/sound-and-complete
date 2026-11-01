@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#2a1214">
+  <title>Sound and Complete</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%23161616'/><circle cx='50' cy='50' r='26' fill='%23c92a1e'/></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Bebas+Neue&family=Bowlby+One+SC&family=Courier+Prime:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,800&family=Gloock&family=Instrument+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Limelight&family=Righteous&family=Rye&family=Shrikhand&family=Unbounded:wght@700&family=Yellowtail&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="main.css">
+</head>
+<body>
+<header class="top">
+  <h1 class="title">Finish AI's Licks</h1>
+  <nav>
+    <a href="sounds.html">Band sounds</a>
+    <a href="lab.html">Input lab</a>
+  </nav>
+</header>
+
+<!-- 1. Setup: the amp (input, tempo, volume, start) and the pedalboard (your rules) -->
+<main id="setup" class="screen">
+  <section class="amp combo" aria-label="Amp">
+    <span class="handle" aria-hidden="true"></span>
+    <div class="nameplate-row"><span class="nameplate">Sound &amp; Complete</span></div>
+    <div class="amp-panel">
+      <div class="ctl ctl-input">
+        <span class="silk">Input</span>
+        <div id="micBox" class="mic-box">
+          <div class="mic-row">
+            <span class="jack" aria-hidden="true"></span>
+            <select id="device" aria-label="Microphone"><option value="">Default microphone</option></select>
+            <button id="enableMic" class="btn">Enable mic</button>
+          </div>
+          <div class="meter"><div id="meterFill"></div></div>
+        </div>
+      </div>
+      <div class="ctl ctl-tuner">
+        <span class="silk">Tuner</span>
+        <div class="tuner" id="tuner" title="Tune to A440 so the app hears the right notes">
+          <span class="tuner-note" id="tunerNote">–</span>
+          <div class="tuner-scale"><i id="tunerNeedle"></i><b></b></div>
+          <span class="tuner-cents" id="tunerCents">pluck a string</span>
+        </div>
+      </div>
+      <div class="ctl knob-wrap"><input type="range" id="bpm" min="60" max="110" value="80" aria-label="Tempo"><span class="silk">Tempo</span><b class="knob-val"><span id="bpmVal">80</span> bpm</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="bandVol" min="0" max="100" value="70" aria-label="Band volume"><span class="silk">Band</span><b class="knob-val"><span id="bandVolVal">70</span>%</b></div>
+      <div class="ctl ctl-mode">
+        <span class="silk">Mode</span>
+        <div class="toggle" role="radiogroup" aria-label="Mode">
+          <label><input type="radio" name="mode" value="mic" checked><span>Guitar</span></label>
+          <i class="lever" aria-hidden="true"></i>
+          <label><input type="radio" name="mode" value="demo"><span>Demo</span></label>
+        </div>
+      </div>
+      <div class="ctl ctl-pilot"><span id="pilot" class="jewel" title="Lights when the mic is on"></span></div>
+      <div class="ctl ctl-start">
+        <button id="start" class="btn btn-primary">Start the song</button>
+      </div>
+    </div>
+    <div class="grille" aria-hidden="true"></div>
+  </section>
+  <p id="micInfo" class="hint amp-note">Use headphones for the band.</p>
+  <p id="startMsg" class="hint amp-note"></p>
+
+  <section class="board-wrap">
+    <div class="board-head">
+      <h2>Your rules <span class="hint">Stomp a pedal to turn its rule on. Turn the knobs to change it.</span></h2>
+      <span id="conflict" class="status hidden"></span>
+    </div>
+    <div id="ruleList" class="board"></div>
+  </section>
+</main>
+
+<!-- 2. Preparing: the calls are written, Lean checks each one -->
+<main id="prep" class="screen hidden">
+  <section class="center-col">
+    <h2 id="prepMsg" class="prep-title">Writing your calls…</h2>
+    <p class="hint">For each call, Lean checks that some answer keeps all your rules.</p>
+    <div id="prepList" class="prep-list"></div>
+    <p id="prepSource" class="hint"></p>
+    <button id="go" class="btn btn-primary hidden">Play</button>
+  </section>
+</main>
+
+<!-- 3. Playing -->
+<main id="play" class="screen hidden">
+  <section class="stage amp combo">
+    <span class="handle" aria-hidden="true"></span>
+    <div class="nameplate-row"><span class="nameplate">Sound &amp; Complete</span></div>
+    <div class="amp-panel stage-panel">
+      <div class="stage-top">
+        <div class="stat"><span class="silk">Bar</span><span class="big"><span id="barNum">–</span><span class="of"> / 12</span></span></div>
+        <p id="who" class="who">Count in</p>
+        <div class="stat right"><span class="silk">Chord</span><span id="chordName" class="big">Am7</span></div>
+      </div>
+      <div class="lanes">
+        <div class="lane"><span class="lane-label">Band</span><div id="gridCall" class="grid"></div></div>
+        <div class="lane"><span class="lane-label" id="youLabel">You</span><div id="gridYou" class="grid"></div></div>
+      </div>
+      <p id="laneNote" class="lane-note"></p>
+      <div class="bars" id="barStrip"></div>
+    </div>
+    <div class="grille grille-short" aria-hidden="true"></div>
+  </section>
+  <ul id="playRules" class="play-rules"></ul>
+  <div class="stage-actions"><button id="stop" class="btn">Stop</button></div>
+</main>
+
+<!-- 4. Report card: printed like the tube chart glued inside an amp -->
+<main id="report" class="screen hidden">
+  <section class="report tube-chart">
+    <div class="report-head">
+      <h2 class="report-title">Report card</h2>
+      <p class="score-line"><span id="score" class="score"></span> <span class="score-of">rules kept</span></p>
+    </div>
+    <div id="reportList" class="report-list"></div>
+    <div class="proof">
+      <h3>What Lean proved</h3>
+      <ul>
+        <li>Every call you heard has at least one answer that keeps all your rules. Each call was checked before it played, and a proof shows the check never makes a mistake.</li>
+        <li>The marks are exact. A rule gets ✓ if and only if your answer, as the app heard it, keeps the rule as written in <code>Spec.lean</code>.</li>
+        <li>Not proven: that the app heard your notes and timing correctly.</li>
+      </ul>
+    </div>
+  </section>
+  <div class="report-actions">
+    <button id="again" class="btn btn-primary">Play again</button>
+    <button id="change" class="btn">Change rules</button>
+  </div>
+</main>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,132 @@
+import SoundAndComplete.Spec
+
+/-!
+# Spec examples: does the spec mean what we think?
+
+`CLAUDE.md` asks for two kinds of checks on a spec:
+
+1. **The rules can be satisfied.** A real answer that obeys a realistic set of
+   rules, so the theorems built on this spec are not empty promises.
+2. **The spec rejects bad answers.** Answers that break a rule are proven to
+   break it.
+
+Plus a rule pair that can never hold together. The app should warn about
+those before you play.
+-/
+
+namespace Blues
+
+/-- First exchange: the answer is in bars 3–4, over Am7. -/
+def ctx0 : Context := ⟨0⟩
+
+/-- A call: E4 on beat 1, D4 on beat 2, C4 on beat 3, then E4 on the shuffle
+"and" of beat 3. It starts going down and ends going up. -/
+def call1 : Phrase := Phrase.ofNotes [(0, 64), (3, 62), (6, 60), (8, 64)]
+
+/-- An answer: D4 on beat 2, C4 on the "and" of beat 3, C4 on beat 5
+(bar 2, beat 1). -/
+def answer1 : Phrase := Phrase.ofNotes [(3, 62), (8, 60), (12, 60)]
+
+theorem call1_notes : notes call1 = [(0, 64), (3, 62), (6, 60), (8, 64)] := by decide
+theorem answer1_notes : notes answer1 = [(3, 62), (8, 60), (12, 60)] := by decide
+
+/-- Almost every rule at once. -/
+def rules1 : List Rule :=
+  [ .echoSomeRhythm 2      -- shares the call's starts on slots 3 and 8
+  , .sequence 2            -- D4 C4 is the call's E4 D4, moved down 2
+  , .sayLess               -- 3 notes against the call's 4
+  , .startNear 2           -- D4 is 2 frets from the call's last note E4
+  , .maxLeap 5
+  , .chordToneOnBeat .third 5   -- C4 on beat 5; C is the third of Am7
+  , .turnaroundTarget 4 1  -- not the turnaround, so this does nothing here
+  , .avoid 10              -- no B♭
+  , .stayBetween 52 69
+  , .maxNotesPerBar 2
+  , .syncopate             -- C4 on slot 8 is off the beat
+  , .leaveSpace 3 ]        -- first note on slot 3
+
+/-! ## 1. The rules can be satisfied -/
+
+/-- `answer1` obeys every rule in `rules1`. -/
+theorem answer1_satisfies : Satisfies ctx0 call1 rules1 answer1 := by
+  refine ⟨⟨by decide, by simp [answer1_notes], ?_⟩, ?_⟩
+  · simp [pitches, answer1_notes, OnGuitar, guitarLow, guitarHigh]
+  · intro r hr
+    simp only [rules1, List.mem_cons, List.not_mem_nil, or_false] at hr
+    rcases hr with h | h | h | h | h | h | h | h | h | h | h | h <;> subst h <;>
+      simp only [RuleHolds, onsetSlots, pitches, call1_notes, answer1_notes]
+    · decide
+    · exact ⟨by decide, by decide, -2, by decide⟩
+    · decide
+    · simp [distance]
+    · simp [NoLeapBiggerThan, distance]
+    · refine ⟨by decide, by decide, 60, by decide, by unfold IsTone; decide⟩
+    · intro h; simp [Context.IsTurnaround, ctx0] at h
+    · simp [pitchClass]
+    · simp
+    · decide
+    · exact ⟨8, 60, by simp, by simp [OnBeat]⟩
+    · intro s p h; simp at h; omega
+
+/-- So `call1` is a call the app may play under `rules1`. -/
+theorem call1_good : GoodCall ctx0 rules1 call1 :=
+  ⟨⟨by decide, by simp [call1_notes], by
+      simp [pitches, call1_notes, OnGuitar, guitarLow, guitarHigh]⟩,
+   answer1, answer1_satisfies⟩
+
+/-! ## 2. The spec rejects bad answers -/
+
+/-- Playing on slot 0 breaks "leave a beat of space". -/
+example : ¬ RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 60)]) (.leaveSpace 3) := by
+  intro h
+  exact absurd (h 0 60 (by decide)) (by decide)
+
+/-- C is not the root of Am7, so C on beat 5 breaks "root on beat 5". -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.chordToneOnBeat .root 5) := by
+  simp only [RuleHolds, answer1_notes]
+  rintro ⟨_, _, p, hp, ht⟩
+  simp [beatSlot] at hp
+  subst hp
+  revert ht; unfold IsTone; decide
+
+/-- Every note on a beat: breaks "syncopate". -/
+example : ¬ RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 57), (3, 60)]) .syncopate := by
+  simp only [RuleHolds]
+  rintro ⟨s, p, hm, hb⟩
+  have : notes (Phrase.ofNotes [(0, 57), (3, 60)]) = [(0, 57), (3, 60)] := by decide
+  rw [this] at hm
+  simp at hm
+  rcases hm with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [OnBeat] at hb
+
+/-- Four notes do not "say less" than a four-note call. -/
+example : ¬ RuleHolds ctx0 call1 call1 .sayLess := by
+  simp [RuleHolds]
+
+/-- On the turnaround, missing the target note breaks the turnaround rule.
+Here the target is E (4) on beat 5, but `answer1` plays C there. -/
+example : ¬ RuleHolds ⟨2⟩ call1 answer1 (.turnaroundTarget 4 5) := by
+  simp only [RuleHolds, answer1_notes]
+  intro h
+  obtain ⟨_, _, p, hp, hpc⟩ := h rfl
+  simp [beatSlot] at hp
+  subst hp
+  revert hpc; decide
+
+/-- The empty answer is never playable. You have to play something. -/
+example : ¬ Playable (Phrase.ofNotes []) := by
+  rintro ⟨_, h, _⟩
+  exact h (by decide)
+
+/-! ## 3. Rule pairs that can never hold together -/
+
+/-- "Echo the rhythm exactly" and "say less" contradict each other, for every
+call: the same note starts means the same number of notes. -/
+theorem echoRhythm_sayLess_conflict (ctx : Context) (call answer : Phrase) :
+    ¬ (RuleHolds ctx call answer .echoRhythm ∧ RuleHolds ctx call answer .sayLess) := by
+  rintro ⟨h1, h2⟩
+  simp only [RuleHolds, onsetSlots] at h1 h2
+  have := congrArg List.length h1
+  simp at this
+  omega
+
+end Blues

@@ -49,6 +49,7 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 | `SoundAndComplete/Music.lean` | Notes, the shuffle grid, the A minor blues. Part of the spec. |
 | `SoundAndComplete/Spec.lean` | **What the rules mean.** Read this to trust the app. |
 | `SoundAndComplete/SpecExamples.lean` | Proofs that the spec accepts real answers, rejects bad ones, and catches rule conflicts. |
+| `SoundAndComplete/SpecProperties.lean` | Proofs that the rules behave sensibly: looser settings and other keys. |
 | `SoundAndComplete/Search.lean` | Generic checkers and the search. |
 | `SoundAndComplete/Checkers.lean` | One checker per rule. |
 | `SoundAndComplete/App.lean` | Answer search, grading, the gate. |
@@ -70,8 +71,14 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 5. **Useful gate**: it only rejects calls that are unplayable or can't be answered (`chooseCall_rejects_only_bad`).
 6. **Impossible rules, decided**: "no call can work with these rules" is said exactly when it is true. A found call is a real good call with a real answer (`findCall_sound`), and if any call could work, one is found (`findCall_complete`).
 7. **Honest hint**: the "answer that keeps every rule" shown after a song does keep every rule (`isCorrectAnswer_iff`).
+8. **A played call always has an answer in hand** (`chooseCall_has_answer`).
+9. **The gate skips only bad calls**, so its count of calls turned down is honest (`chooseCall_skips_only_bad`).
 
 The promises hold for all 11 rules, with no `sorry` (`make audit`).
+
+`SpecProperties.lean` tests the spec itself: a looser setting never turns a pass
+into a fail, and moving the call and answer to another key does not change the
+rules about melody shape.
 
 The report card judges each rule alone, so silence passes rules that only forbid
 something, such as "never play A". A call or answer the app suggests always has
@@ -107,10 +114,11 @@ If the samples are missing, the band falls back to its built-in synthesized soun
 
 ## Comparator
 
-`SoundAndComplete/Challenge.lean` restates the ten main theorems with no
+`SoundAndComplete/Challenge.lean` restates the main theorems with no
 proof; `comparator.json` lists them and allows only the standard axioms
 (`propext`, `Quot.sound`, `Classical.choice`). `make comparator` runs
 `lake check` and `lake comparator` in a Linux container (they need the Linux
 `bwrap` sandbox). Both pass, and `comparator/run.sh --paranoid` also passes on
 every bundled kernel: Lean default and paranoid, lean4lean, nanoda, con-leche
-and con-ron.
+and con-ron. The kernels need memory: they ran out with 750 MB free, and passed
+in a 6 GB VM.

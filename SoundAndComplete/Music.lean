@@ -97,6 +97,13 @@ def Phrase.ofNotes (ns : List (Nat × Pitch)) : Phrase :=
     | some (_, p) => .note p
     | none => .rest
 
+/-- Move every note of a phrase up by `d` frets. Rests and timing do not change.
+Only for stating properties of the rules: the app does not use it. -/
+def Phrase.moveUp (d : Nat) (ph : Phrase) : Phrase :=
+  ph.map fun
+    | .rest => .rest
+    | .note p => .note (p + d)
+
 /-! ## Chords -/
 
 /-- The two kinds of chord in a minor blues. -/

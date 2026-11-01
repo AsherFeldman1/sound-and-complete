@@ -153,7 +153,7 @@ def demo : IO Unit := do
     IO.println s!"App plays: {showPhrase call}"
     match findAnswer ctx call rules with
     | some ans => IO.println s!"One answer that obeys your rules: {showPhrase ans}"
-    | none => IO.println "(cannot happen if the theorems hold)"
+    | none => IO.println "(cannot happen: see chooseCall_has_answer)"
 
 def main (args : List String) : IO Unit := do
   match args with

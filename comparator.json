@@ -10,8 +10,21 @@
     "Blues.findAnswer_complete",
     "Blues.chooseCall_safe",
     "Blues.chooseCall_rejects_only_bad",
+    "Blues.chooseCall_has_answer",
+    "Blues.chooseCall_skips_only_bad",
     "Blues.findCall_sound",
-    "Blues.findCall_complete"
+    "Blues.findCall_complete",
+    "Blues.maxLeap_looser",
+    "Blues.startNear_looser",
+    "Blues.maxNotesPerBar_looser",
+    "Blues.leaveSpace_looser",
+    "Blues.stayBetween_looser",
+    "Blues.echoSomeRhythm_looser",
+    "Blues.sequence_looser",
+    "Blues.echoRhythm_gives_echoSomeRhythm",
+    "Blues.maxLeap_moveUp",
+    "Blues.startNear_moveUp",
+    "Blues.sequence_moveUp"
   ],
   "definition_names": [],
   "permitted_axioms": ["propext", "Quot.sound", "Classical.choice"]

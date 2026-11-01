@@ -55,6 +55,19 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   sorry
 
+theorem chooseCall_has_answer (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call →
+      ∃ answer, findAnswer ctx call rules = some answer ∧ Satisfies ctx call rules answer := by
+  sorry
+
+theorem chooseCall_skips_only_bad (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call →
+      ∀ (i : Nat) (hi : i < proposals.length), i < proposals.idxOf call →
+        ¬ GoodCall ctx rules proposals[i] := by
+  sorry
+
 theorem findCall_sound (ctx : Context) (rules : List Rule) (call answer : Phrase) :
     findCall ctx rules = some (call, answer) →
       GoodCall ctx rules call ∧ Satisfies ctx call rules answer := by
@@ -62,6 +75,59 @@ theorem findCall_sound (ctx : Context) (rules : List Rule) (call answer : Phrase
 
 theorem findCall_complete (ctx : Context) (rules : List Rule) :
     CallExists ctx rules → (findCall ctx rules).isSome := by
+  sorry
+
+/-! Properties of the rules (`SpecProperties.lean`) -/
+
+theorem maxLeap_looser (ctx : Context) (call answer : Phrase) {k k' : Nat} (hk : k ≤ k') :
+    RuleHolds ctx call answer (.maxLeap k) → RuleHolds ctx call answer (.maxLeap k') := by
+  sorry
+
+theorem startNear_looser (ctx : Context) (call answer : Phrase) {k k' : Nat} (hk : k ≤ k') :
+    RuleHolds ctx call answer (.startNear k) → RuleHolds ctx call answer (.startNear k') := by
+  sorry
+
+theorem maxNotesPerBar_looser (ctx : Context) (call answer : Phrase) {n n' : Nat} (hn : n ≤ n') :
+    RuleHolds ctx call answer (.maxNotesPerBar n) →
+      RuleHolds ctx call answer (.maxNotesPerBar n') := by
+  sorry
+
+theorem leaveSpace_looser (ctx : Context) (call answer : Phrase) {k k' : Nat} (hk : k' ≤ k) :
+    RuleHolds ctx call answer (.leaveSpace k) → RuleHolds ctx call answer (.leaveSpace k') := by
+  sorry
+
+theorem stayBetween_looser (ctx : Context) (call answer : Phrase) {low low' high high' : Pitch}
+    (hlow : low' ≤ low) (hhigh : high ≤ high') :
+    RuleHolds ctx call answer (.stayBetween low high) →
+      RuleHolds ctx call answer (.stayBetween low' high') := by
+  sorry
+
+theorem echoSomeRhythm_looser (ctx : Context) (call answer : Phrase) {k k' : Nat} (hk : k' ≤ k) :
+    RuleHolds ctx call answer (.echoSomeRhythm k) →
+      RuleHolds ctx call answer (.echoSomeRhythm k') := by
+  sorry
+
+theorem sequence_looser (ctx : Context) (call answer : Phrase) {n n' : Nat} (hn : n' ≤ n) :
+    RuleHolds ctx call answer (.sequence n) → RuleHolds ctx call answer (.sequence n') := by
+  sorry
+
+theorem echoRhythm_gives_echoSomeRhythm (ctx : Context) (call answer : Phrase) {k : Nat}
+    (hk : k ≤ (onsetSlots call).length) :
+    RuleHolds ctx call answer .echoRhythm → RuleHolds ctx call answer (.echoSomeRhythm k) := by
+  sorry
+
+theorem maxLeap_moveUp (ctx : Context) (call answer : Phrase) (k d : Nat) :
+    RuleHolds ctx call (answer.moveUp d) (.maxLeap k) ↔ RuleHolds ctx call answer (.maxLeap k) := by
+  sorry
+
+theorem startNear_moveUp (ctx : Context) (call answer : Phrase) (k d : Nat) :
+    RuleHolds ctx (call.moveUp d) (answer.moveUp d) (.startNear k) ↔
+      RuleHolds ctx call answer (.startNear k) := by
+  sorry
+
+theorem sequence_moveUp (ctx : Context) (call answer : Phrase) (n d : Nat) :
+    RuleHolds ctx (call.moveUp d) (answer.moveUp d) (.sequence n) ↔
+      RuleHolds ctx call answer (.sequence n) := by
   sorry
 
 end Blues

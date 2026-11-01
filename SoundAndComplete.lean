@@ -1,6 +1,7 @@
 import SoundAndComplete.Music
 import SoundAndComplete.Spec
 import SoundAndComplete.SpecExamples
+import SoundAndComplete.SpecProperties
 import SoundAndComplete.Search
 import SoundAndComplete.Checkers
 import SoundAndComplete.App

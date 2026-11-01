@@ -21,7 +21,7 @@ def main (args : List String) : IO Unit := do
   let cases : List (String × List Rule) :=
     [ ("maxLeap 3", [.maxLeap 3]),
       ("sayLess+maxLeap", [.sayLess, .maxLeap 5]),
-      ("rules1 (12 rules)", rules1),
+      ("rules1 (10 rules)", rules1),
       ("seq4+maxLeap+perBar4+chordTone",
         [.sequence 4, .maxLeap 5, .maxNotesPerBar 4, .chordToneOnBeat .third 5]) ]
   for (name, rules) in (if which == 99 then cases else [cases[which]!]) do

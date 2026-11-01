@@ -1,4 +1,5 @@
 import SoundAndComplete.CallSearchProofs
+import SoundAndComplete.SpecProperties
 
 /-!
 # The main theorems
@@ -201,6 +202,42 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
   have := List.find?_eq_none.mp h call hc
   rw [(callIsGood_iff ctx rules call).mpr hgood] at this
   exact this rfl
+
+/-- **In plain words:** if the gate picks a call, the search has a real answer to
+it, and that answer keeps every rule.
+
+**Why you care:** this joins the gate to the hint. The app plays the call and
+shows this answer, so the answer is never missing for a call that was played. -/
+theorem chooseCall_has_answer (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call →
+      ∃ answer, findAnswer ctx call rules = some answer ∧ Satisfies ctx call rules answer := by
+  intro h
+  have hans := (chooseCall_safe ctx rules proposals call h).2.2
+  obtain ⟨answer, ha⟩ := Option.isSome_iff_exists.mp (findAnswer_complete ctx call rules hans)
+  exact ⟨answer, ha, findAnswer_sound ctx call rules answer ha⟩
+
+/-- **In plain words:** every proposal before the chosen call is bad. The gate
+does not skip a good call.
+
+**Why you care:** the app counts the proposals before the chosen one and tells
+you Lean turned them down. This says that count is honest. The position
+`proposals.idxOf call` is the number the app receives. -/
+theorem chooseCall_skips_only_bad (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call →
+      ∀ (i : Nat) (hi : i < proposals.length), i < proposals.idxOf call →
+        ¬ GoodCall ctx rules proposals[i] := by
+  intro h i hi hbefore hgood
+  have hfound : proposals.find? (callIsGood ctx rules) = some call := h
+  obtain ⟨hcall, before, after, rfl, hbad⟩ := List.find?_eq_some_iff_append.mp hfound
+  have hnot : ∀ c ∈ before, callIsGood ctx rules c = false := fun c hc => by simpa using hbad c hc
+  have hcall_out : call ∉ before := fun hc => by simp [hnot call hc] at hcall
+  have hlt : i < before.length := by simpa [List.idxOf_append, hcall_out] using hbefore
+  rw [List.getElem_append_left hlt] at hgood
+  have := hnot _ (List.getElem_mem hlt)
+  rw [(callIsGood_iff ctx rules _).mpr hgood] at this
+  cases this
 
 /-! ## 5. Impossible rules: decided before you play -/
 

@@ -6,12 +6,13 @@ import SoundAndComplete.Spec
 `CLAUDE.md` asks for two kinds of checks on a spec:
 
 1. **The rules can be satisfied.** A real answer that obeys a realistic set of
-   rules, so the theorems built on this spec are not empty promises.
-2. **The spec rejects bad answers.** Answers that break a rule are proven to
-   break it.
+   rules, so the theorems built on this spec are not empty promises. Every rule
+   is shown holding in a case where it really applies.
+2. **The spec rejects bad answers.** Every rule that can fail has an answer
+   proven to break it.
 
-Plus a rule pair that can never hold together. The app should warn about
-those before you play.
+Plus a limit worth knowing (silence obeys some rules), and a rule pair that can
+never hold together. The app should warn about those before you play.
 -/
 
 namespace Blues
@@ -103,12 +104,77 @@ example : RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 69), (3, 67)]) (.sequence 2)
 example : ¬ RuleHolds ctx0 call1 call1 .sayLess := by
   simp [RuleHolds]
 
+/-- `answer1` starts its notes in different slots from the call. -/
+example : ¬ RuleHolds ctx0 call1 answer1 .echoRhythm := by
+  simp only [RuleHolds, onsetSlots, call1_notes, answer1_notes]
+  decide
+
+/-- `answer1` shares only two starts with the call (slots 3 and 8), not three. -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.echoSomeRhythm 3) := by
+  simp only [RuleHolds, onsetSlots, call1_notes, answer1_notes]
+  decide
+
+/-- `answer1` plays D C C. The call starts E D C. The first two notes move down
+2, but the third moves by 0, so this is not one shift. -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.sequence 3) := by
+  simp only [RuleHolds, pitches, call1_notes, answer1_notes]
+  rintro ⟨-, -, shift, -, h⟩
+  simp at h
+  omega
+
+/-- `answer1` starts on D4, 2 frets from the call's last note E4, not 1. -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.startNear 1) := by
+  simp only [RuleHolds, pitches, call1_notes, answer1_notes]
+  intro h
+  exact absurd (h 64 62 (by decide) (by decide)) (by decide)
+
+/-- `answer1` steps from D4 to C4: 2 frets, more than 1. -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.maxLeap 1) := by
+  simp [RuleHolds, pitches, answer1_notes, NoLeapBiggerThan, distance]
+
+/-- `answer1` plays C, so it breaks "never play C". -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.avoid 0) := by
+  simp only [RuleHolds, pitches, answer1_notes]
+  intro h
+  exact absurd (h 60 (by decide)) (by decide)
+
+/-- `answer1` plays C4 (60), below the bottom of the position (61). -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.stayBetween 61 69) := by
+  simp only [RuleHolds, pitches, answer1_notes]
+  intro h
+  exact absurd (h 60 (by decide)).1 (by decide)
+
+/-- `answer1` has two notes in bar 1 (slots 3 and 8), more than 1. -/
+example : ¬ RuleHolds ctx0 call1 answer1 (.maxNotesPerBar 1) := by
+  simp only [RuleHolds, answer1_notes]
+  decide
+
 /-- The empty answer is never playable. You have to play something. -/
 example : ¬ Playable (Phrase.ofNotes []) := by
   rintro ⟨_, h, _⟩
   exact h (by decide)
 
-/-! ## 3. Rule pairs that can never hold together -/
+/-! ## 3. A rule that `rules1` does not test
+
+`rules1` leaves out `echoRhythm` (it conflicts with `sayLess`), so it gets its
+own real example. -/
+
+/-- Same four starts as `call1`, with different notes. -/
+theorem echoRhythm_can_hold :
+    RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 57), (3, 57), (6, 57), (8, 57)]) .echoRhythm := by
+  simp only [RuleHolds]
+  decide
+
+/-! ## 4. A limit: silence obeys some rules -/
+
+/-- Playing nothing obeys "never play A". A rule alone does not ask you to play;
+`Playable` does that. So `Satisfies` rejects silence, but the report card, which
+judges one rule at a time, can give it a check mark. -/
+theorem silence_obeys_avoid : RuleHolds ctx0 call1 (Phrase.ofNotes []) (.avoid 9) := by
+  have h : notes (Phrase.ofNotes []) = [] := by decide
+  simp [RuleHolds, pitches, h]
+
+/-! ## 5. Rule pairs that can never hold together -/
 
 /-- "Echo the rhythm exactly" and "say less" contradict each other, for every
 call: the same note starts means the same number of notes. -/

@@ -4,11 +4,11 @@ import SoundAndComplete.Music
 # The spec: what the rules mean
 
 This is the file to review. It says, in plain terms, what each practice rule
-means and when an answer obeys the rules. The main theorems are stated using
-only these definitions and the ones in `Music.lean`.
+means and when an answer obeys the rules. This file and `Music.lean` are all you
+must agree with: the main theorems compare the running code against them.
 
-Nothing here runs. The code that runs (the checkers and the search) will be
-proven to match this file.
+Nothing here runs. The code that runs (the checkers and the search) is proven
+to match this file.
 
 A rule talks about your answer, and may also look at the call it answers and at
 where you are in the song (`ctx`).

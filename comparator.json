@@ -4,6 +4,8 @@
   "theorem_names": [
     "Blues.ruleChecker_correct",
     "Blues.grade_correct",
+    "Blues.grade_keeps_rule_order",
+    "Blues.isCorrectAnswer_iff",
     "Blues.findAnswer_sound",
     "Blues.findAnswer_complete",
     "Blues.chooseCall_safe",

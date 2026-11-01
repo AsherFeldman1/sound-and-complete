@@ -551,7 +551,7 @@ theorem maxLeap_correct (k : Nat) :
 
 end Memory
 
-/-! ## Rules still being proven -/
+/-! ## Rules that compare your answer with the call -/
 
 /-- Note starts come in strictly increasing order. -/
 theorem notesFrom_sorted (i : Nat) (w : Phrase) :

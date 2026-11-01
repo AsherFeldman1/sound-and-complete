@@ -197,6 +197,42 @@ export function phraseNotes(phrase, bpm) {
 }
 
 /**
+ * Phrase a lick like a guitarist. PURE.
+ *
+ * Splits the notes into picked groups. Within a quick run (next note at most
+ * 2 slots later and at most 4 semitones away), only the first note is picked;
+ * the rest are hammer-ons / pull-offs (an instant pitch change on the ringing
+ * string), or short slides when there is a little time between them. A repeated
+ * pitch is always picked again. Runs are re-picked after 5 notes.
+ * The longest held A, D or E (the usual targets in A minor) is bent up into
+ * from a whole step below.
+ * @returns {Array<{start: object, notes: object[], moves: Array<{time, midi, kind}>, bend: number}>}
+ *   groups; `moves` are the pitch changes after the picked note (kind "hammer" or "slide");
+ *   `bend` is the bend's starting offset in semitones (0 = no bend).
+ */
+export function articulate(notes, beat) {
+  const slot = beat / 3;
+  const groups = [];
+  let g = null;
+  for (const n of notes) {
+    const prev = g?.notes[g.notes.length - 1];
+    const legato = prev && n.slot - prev.slot <= 2 && n.midi !== prev.midi &&
+      Math.abs(n.midi - prev.midi) <= 4 && g.notes.length < 5;
+    if (legato) {
+      g.notes.push(n);
+      g.moves.push({ time: n.time, midi: n.midi, kind: n.slot - prev.slot >= 2 ? "slide" : "hammer", glide: Math.min(0.07, 0.6 * slot) });
+    } else {
+      g = { start: n, notes: [n], moves: [], bend: 0 };
+      groups.push(g);
+    }
+  }
+  // One bend per phrase: the longest held, picked target note.
+  const targets = groups.filter((x) => x.notes.length === 1 && x.start.dur >= 0.5 * beat && [2, 4, 9].includes(((x.start.midi % 12) + 12) % 12));
+  if (targets.length) targets.reduce((a, b) => (b.start.dur > a.start.dur ? b : a)).bend = -2;
+  return groups;
+}
+
+/**
  * Karplus-Strong plucked string. PURE.
  * The delay loop has a period of N - 0.5 samples; the caller plays the
  * buffer at `rate` to land exactly on `freq`.
@@ -568,11 +604,59 @@ export class Band {
    * Play a 24-slot phrase on the lead guitar, slot i at startTime + i * slotDur.
    * Scheduled all at once (at most 24 notes).
    */
+  /** Play notes from a recorded guitar, phrased by articulate(): one pick per
+   * group, hammer-ons / slides by moving the ringing note's pitch, one bend. */
+  _playArticulated(notes, startTime, beat, gain) {
+    const amp = this.samples.guitar.option.amp;
+    // The shared amp (amp.js, the Deluxe capture) when the app provides one.
+    const dest = this.leadAmpIn ?? (amp === "blues" ? this.ampBlues : amp === "clean" ? this.ampClean : this.leadClean);
+    for (const g of articulate(notes, beat)) {
+      const first = g.start, last = g.notes[g.notes.length - 1];
+      const t = startTime + first.time;
+      const end = last.time + last.dur; // group end, relative to the phrase
+      const accent = first.slot % 3 === 0 ? 1 : 0.88;
+      const vel = clamp(accent * (0.9 + Math.random() * 0.08), 0, 1);
+      const held = last.dur >= 0.6 * beat;
+      const tail = last.cut ? 0 : Math.max(0, 1.2 * beat - last.dur); // a phrase's last note rings on
+      const base = clamp(first.midi, 28, 100);
+      const v = this.samples.guitar.play(base, t, dest, {
+        dur: end - first.time + tail + (last.cut ? 0.015 : 0), vel, gain: 1.2 * gain, release: last.cut ? 0.05 : 0.35,
+        // Vibrato on the held note at the end of the group; wider after a bend, like a singer.
+        vibrato: held ? { cents: g.bend ? 26 : 18, rate: 5.4, delay: last.time - first.time + Math.min(0.28, 0.35 * last.dur) + (g.bend ? 0.12 : 0) } : undefined,
+      });
+      if (!v) continue;
+      const det = v.src.detune;
+      det.setValueAtTime(g.bend * 100, t);
+      if (g.bend) {
+        // Pick the note a whole step low, then push the string up to pitch.
+        det.setValueAtTime(g.bend * 100, t + 0.03);
+        det.setTargetAtTime(0, t + 0.03, 0.045);
+      }
+      let prevCents = 0;
+      for (const m of g.moves) {
+        const tm = startTime + m.time, cents = (clamp(m.midi, 28, 100) - base) * 100;
+        if (m.kind === "slide") {
+          det.setValueAtTime(prevCents, tm - m.glide); // hold, then glide into the note
+          det.linearRampToValueAtTime(cents, tm);
+        } else {
+          det.setValueAtTime(cents, tm); // hammer-on / pull-off: the new pitch at once
+        }
+        prevCents = cents;
+      }
+      this._track([v.src, v.env], v.sources, v.env, v.end);
+    }
+  }
+
   playPhrase(phrase, startTime, bpm, { gain = 1 } = {}) {
     const ctx = this.ctx;
     const beat = 60 / bpm;
     this.leadDelay.delayTime.setValueAtTime(clamp((2 / 3) * beat, 0.05, 1.9), startTime);
-    for (const n of phraseNotes(phrase, bpm)) {
+    const notes = phraseNotes(phrase, bpm);
+    if (this.samples) {
+      this._playArticulated(notes, startTime, beat, gain);
+      return;
+    }
+    for (const n of notes) {
       const t = startTime + n.time;
       const midi = clamp(n.midi, 28, 100);
       const accent = n.slot % 3 === 0 ? 1 : n.slot % 3 === 2 ? 0.86 : 0.8;

@@ -15,6 +15,7 @@ import { GuitarAmp } from "./audio/amp.js";
 import { SOUNDS_KEY } from "./audio/sounds.js";
 import { makeKnob } from "./knob.js";
 import { PEDAL_DESIGNS, ART } from "./pedals.js";
+import { renderFretboard } from "./fretboard.js";
 
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls, text) => {
@@ -35,7 +36,7 @@ const savePrefs = (p) => {
   try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...loadPrefs(), ...p })); } catch { /* ignore */ }
 };
 
-const DEFAULT_ON = ["startNear", "maxLeap", "chordToneOnBeat", "syncopate"];
+const DEFAULT_ON = ["startNear", "maxLeap", "chordToneOnBeat", "leaveSpace"];
 const prefs = loadPrefs();
 // ruleState[name] = {on, params}
 const ruleState = Object.fromEntries(
@@ -80,6 +81,11 @@ async function ensureAudio() {
     S.band.volume = Number($("bandVol").value) / 100;
     S.amp = new GuitarAmp(S.ctx);
     S.amp.set(ampSettings());
+    // The AI's guitar plays through its own copy of the same amp, set warm and
+    // round, into the band's lead channel (so the Band knob and echo apply).
+    S.leadAmp = new GuitarAmp(S.ctx, { output: S.band.leadOut, inputTrim: 0.6, echo: false }); // the band adds its own echo
+    S.leadAmp.set({ drive: 0.5, tone: 0.42, reverb: 0.3, volume: 0.95, on: true });
+    S.band.leadAmpIn = S.leadAmp.input;
     let sounds = {};
     try { sounds = JSON.parse(localStorage.getItem(SOUNDS_KEY) || "{}"); } catch { /* defaults */ }
     S.samplesReady = S.band.loadSamples(sounds); // recorded instruments (falls back to synth)
@@ -94,8 +100,9 @@ async function ensureAudio() {
 // A rule's setting is a knob on its pedal. Every kind of setting (a number,
 // a chord tone, a note name, a pitch) is a list of positions the knob clicks
 // through; the printed label under the knob shows the current one.
-const PARAM_LABEL = { frets: "frets", k: "notes", n: "notes", low: "low", high: "high", note: "note", tone: "tone", beat: "beat", slots: "wait" };
+const PARAM_LABEL = { frets: "frets", k: "notes", n: "notes", low: "low", high: "high", note: "note", tone: "tone", beat: "bar·beat", slots: "wait" };
 function paramOptions(p) {
+  if (p.key === "beat") return Array.from({ length: p.max - p.min + 1 }, (_, i) => [p.min + i, `${p.min + i <= 4 ? 1 : 2}·${((p.min + i - 1) % 4) + 1}`]);
   if (p.kind === "int") return Array.from({ length: p.max - p.min + 1 }, (_, i) => [p.min + i, String(p.min + i)]);
   if (p.kind === "tone") return ["root", "third", "fifth", "seventh"].map((t) => [t, t]);
   if (p.kind === "note") return NOTE_NAMES.map((n, i) => [i, n]);
@@ -329,6 +336,7 @@ function ampSettings() {
     drive: Number($("ampDrive").value) / 100,
     tone: Number($("ampTone").value) / 100,
     volume: Number($("ampVol").value) / 100,
+    reverb: Number($("ampVerb").value) / 100,
     on: Boolean(S.ampAllowed),
   };
 }
@@ -459,6 +467,29 @@ function stopSong() {
   cancelAnimationFrame(S.raf);
 }
 
+// The neck: shows the AI's notes as it plays them. On by default; the switch
+// under the stage hides it, and the choice is remembered.
+const fretOn = () => $("showFret").checked;
+$("showFret").checked = prefs.showFret ?? true;
+$("fretboard").classList.toggle("hidden", !fretOn());
+$("showFret").addEventListener("change", () => {
+  $("fretboard").classList.toggle("hidden", !fretOn());
+  savePrefs({ showFret: fretOn() });
+});
+
+/** Empty play screen: blank lanes, no bar, no chord, no message. */
+function clearStage() {
+  renderFretboard($("fretboard"), null);
+  renderGrid($("gridCall"), null);
+  renderGrid($("gridYou"), null);
+  $("laneNote").textContent = "";
+  $("barNum").textContent = "-";
+  $("chordName").textContent = "Am7";
+  $("who").textContent = "Count in";
+  $("who").className = "who";
+  for (const b of $("barStrip").children) b.classList.remove("now");
+}
+
 async function playSong() {
   await ensureAudio();
   const isDemo = mode() === "demo";
@@ -467,8 +498,9 @@ async function playSong() {
     $("startMsg").textContent = "Enable the mic first, or choose the demo.";
     return;
   }
-  show("play");
   stopSong();
+  clearStage(); // don't show the last song's notes and loudness while counting in
+  show("play");
   S.playing = true;
   S.played = [null, null, null];
   const tempo = bpm();
@@ -565,6 +597,8 @@ async function playSong() {
       $("who").textContent = `${Math.max(1, Math.min(4, beat))}`;
       $("who").className = "who";
       $("laneNote").textContent = "";
+      renderGrid($("gridCall"), null);
+      renderGrid($("gridYou"), null);
       setOrb("idle", 0.5 * pulse(((rel + barDur) % (barDur / 4)) / (barDur / 4)));
     } else if (bar <= 12) {
       $("barNum").textContent = bar;
@@ -588,6 +622,13 @@ async function playSong() {
       const slotInCall = Math.floor((t - w.callStart) / slotDur);
       const slotInAnswer = Math.floor((t - w.answerStart) / slotDur);
       renderGrid($("gridCall"), ex[e].call, { now: inCall ? slotInCall : -1, upTo: inCall ? slotInCall + 1 : 24 });
+      // The neck shows the AI's notes as they sound: the call, and in the demo
+      // the computer's answer too. On your turn the whole call stays up, unlit.
+      if (fretOn()) {
+        if (inCall) renderFretboard($("fretboard"), ex[e].call, { upTo: slotInCall + 1, now: slotInCall });
+        else if (isDemo) renderFretboard($("fretboard"), w.live, { upTo: slotInAnswer + 1, now: slotInAnswer });
+        else renderFretboard($("fretboard"), ex[e].call, { upTo: 24, now: -1 });
+      }
       // While you play, the "You" lane shows how loud you played in each slot,
       // not note names: notes are read in full when the answer ends and shown
       // on the report card. Demo mode shows the computer's notes.
@@ -722,7 +763,7 @@ function init() {
   for (const r of document.querySelectorAll("input[name=mode]")) r.addEventListener("change", syncMode);
   makeKnob($("bpm"));
   makeKnob($("bandVol"));
-  for (const id of ["ampDrive", "ampTone", "ampVol"]) {
+  for (const id of ["ampDrive", "ampTone", "ampVerb", "ampVol"]) {
     if (prefs[id] !== undefined) $(id).value = prefs[id];
     const show = () => { $(`${id}Val`).textContent = String(Math.round(Number($(id).value)) / 10); };
     show();

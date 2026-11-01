@@ -485,3 +485,25 @@ select { font: 400 14px var(--sans); height: 40px; background: var(--raised); co
 .page-head h1 { font-size: 40px; }
 .who { font-family: "Fraunces", Georgia, serif; font-weight: 600; }
 .stat .big { font-family: "Fraunces", Georgia, serif; font-weight: 600; }
+
+/* The neck: rosewood board, pearl dots, nickel frets. */
+.fretboard { margin: 10px 0 4px 52px; }
+.fretboard svg { display: block; width: 100%; height: auto; }
+.fb-wood { fill: #3a2418; stroke: #1c110b; stroke-width: 1; }
+.fb-inlay { fill: #e8dcc0; opacity: 0.8; }
+.fb-fret { stroke: #b9b2a3; stroke-width: 2; }
+.fb-nut { fill: #efe5c8; }
+.fb-string { stroke: #d9d3c4; opacity: 0.85; }
+.fb-num { font: 600 10px var(--sans); fill: #4a4740; text-anchor: middle; }
+.fb-path { fill: none; stroke: var(--band); stroke-width: 2; stroke-dasharray: 3 4; opacity: 0.55; }
+.fb-note circle { fill: var(--band); stroke: #1b1a17; stroke-width: 1.5; transition: r 120ms var(--ease); }
+.fb-note text { font: 700 9px var(--sans); fill: #1b1a17; text-anchor: middle; }
+.fb-note.on circle { fill: #ffd27a; filter: drop-shadow(0 0 6px #ffb84a); }
+.switch { display: inline-flex; align-items: center; gap: 8px; margin-right: 16px; font-size: 13px; color: var(--text-2); cursor: pointer; vertical-align: middle; }
+.switch input { position: absolute; opacity: 0; pointer-events: none; }
+.switch-track { width: 34px; height: 20px; border-radius: 10px; background: var(--raised); border: 1px solid var(--hair); position: relative; transition: background 150ms var(--ease); }
+.switch-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-3); transition: transform 150ms var(--ease), background 150ms var(--ease); }
+.switch input:checked + .switch-track { background: color-mix(in srgb, var(--band) 45%, var(--raised)); }
+.switch input:checked + .switch-track::after { transform: translateX(14px); background: var(--text); }
+.switch input:focus-visible + .switch-track { outline: 2px solid var(--you); outline-offset: 2px; }
+@media (max-width: 640px) { .fretboard { margin-left: 0; } }

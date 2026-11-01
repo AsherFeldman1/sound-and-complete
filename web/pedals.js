@@ -22,9 +22,7 @@ export const PEDAL_DESIGNS = {
   stayBetween:      { type: "wide",    c: "#b9bcc0", print: "#1a1a1a", font: "'Limelight'", size: 22, finish: "brushed", knob: "black", model: "Position", art: "range", frame: true },
   avoid:            { type: "box",     c: "#ec6a1f", print: "#1c0d02", font: "'Shrikhand'", size: 30, finish: "gloss", knob: "cream", model: "AV-10", art: "nonote" },
   chordToneOnBeat:  { type: "treadle", c: "#2a6fd6", print: "#ffffff", font: "'Unbounded'", weight: 700, size: 14, finish: "gloss", knob: "black", model: "CT-3" },
-  turnaroundTarget: { type: "box",     c: "#b79a52", print: "#2a1f08", font: "'Rye'", size: 19, finish: "hammer", knob: "cream", model: "TT-1", art: "loop", frame: true },
   maxNotesPerBar:   { type: "mini",    c: "#e34b8c", print: "#fff0f6", font: "'Bowlby One SC'", size: 18, finish: "gloss", knob: "white", model: "Room", art: "blocks" },
-  syncopate:        { type: "box",     c: "#8fd8c9", print: "#0c2a24", font: "'Bebas Neue'", size: 40, finish: "gloss", knob: "black", model: "Sync", art: "offbeat" },
   leaveSpace:       { type: "wide",    c: "#5c1424", print: "#f7e3c9", font: "'Gloock'", size: 24, finish: "sparkle", knob: "chrome", model: "WB-3", art: "hourglass", frame: true },
 };
 

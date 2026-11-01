@@ -49,11 +49,9 @@ theorem ruleChecker_correct (ctx : Context) (call answer : Phrase) (r : Rule)
   | startNear k => exact startNear_correct ctx call answer k
   | maxLeap k => exact maxLeap_correct ctx call answer k
   | chordToneOnBeat t b => exact chordToneOnBeat_correct ctx call answer t b
-  | turnaroundTarget n b => exact turnaroundTarget_correct ctx call answer n b
   | avoid n => exact avoid_correct ctx call answer n
   | stayBetween low high => exact stayBetween_correct ctx call answer low high
   | maxNotesPerBar n => exact maxNotesPerBar_correct ctx call answer n
-  | syncopate => exact syncopate_correct ctx call answer
   | leaveSpace k => exact leaveSpace_correct ctx call answer k
 
 /-! ## 2. The report card is honest -/
@@ -201,10 +199,6 @@ theorem knownConflict_sound (ctx : Context) (rules : List Rule) :
     cases r <;> simp only [Rule.impossibleAlone, Bool.false_eq_true] at himp
     case chordToneOnBeat t b =>
       obtain ⟨h1, h2, -⟩ := hholds
-      simp_all
-    case turnaroundTarget n b =>
-      simp only [Bool.and_eq_true, beq_iff_eq] at himp
-      obtain ⟨h1, h2, -⟩ := hholds himp.1
       simp_all
     case stayBetween low high =>
       have := hholds p (by simp only [pitches, List.mem_map]; exact ⟨_, hsp, rfl⟩)

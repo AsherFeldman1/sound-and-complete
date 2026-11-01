@@ -13,7 +13,7 @@
 </head>
 <body>
 <header class="top">
-  <h1 class="title">AL's Licks</h1>
+  <h1 class="title">Sound and Complete</h1>
   <nav>
     <a href="sounds.html">Band sounds</a>
     <a href="lab.html">Input lab</a>
@@ -48,8 +48,9 @@
       <div class="ctl knob-wrap"><input type="range" id="bpm" min="60" max="110" value="80" aria-label="Tempo"><span class="silk">Tempo</span><b class="knob-val"><span id="bpmVal">80</span> bpm</b></div>
       <div class="ctl knob-wrap"><input type="range" id="bandVol" min="0" max="100" value="70" aria-label="Band volume"><span class="silk">Band</span><b class="knob-val"><span id="bandVolVal">70</span>%</b></div>
       <!-- The amp: your guitar, out loud, through a simulated tube amp -->
-      <div class="ctl knob-wrap"><input type="range" id="ampDrive" min="0" max="100" value="40" aria-label="Amp drive"><span class="silk">Drive</span><b class="knob-val" id="ampDriveVal">4</b></div>
-      <div class="ctl knob-wrap"><input type="range" id="ampTone" min="0" max="100" value="55" aria-label="Amp tone"><span class="silk">Tone</span><b class="knob-val" id="ampToneVal">5.5</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="ampDrive" min="0" max="100" value="55" aria-label="Amp drive"><span class="silk">Drive</span><b class="knob-val" id="ampDriveVal">5.5</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="ampTone" min="0" max="100" value="45" aria-label="Amp tone"><span class="silk">Tone</span><b class="knob-val" id="ampToneVal">4.5</b></div>
+      <div class="ctl knob-wrap"><input type="range" id="ampVerb" min="0" max="100" value="40" aria-label="Reverb"><span class="silk">Reverb</span><b class="knob-val" id="ampVerbVal">4</b></div>
       <div class="ctl knob-wrap"><input type="range" id="ampVol" min="0" max="100" value="60" aria-label="Guitar volume"><span class="silk">Guitar</span><b class="knob-val" id="ampVolVal">6</b></div>
       <div class="ctl ctl-mode">
         <span class="silk">Mode</span>
@@ -105,12 +106,16 @@
         <div class="lane"><span class="lane-label" id="youLabel">You</span><div id="gridYou" class="grid"></div></div>
       </div>
       <p id="laneNote" class="lane-note"></p>
+      <div id="fretboard" class="fretboard" aria-live="off"></div>
       <div class="bars" id="barStrip"></div>
     </div>
     <div class="grille grille-short" aria-hidden="true"></div>
   </section>
   <ul id="playRules" class="play-rules"></ul>
-  <div class="stage-actions"><button id="stop" class="btn">Stop</button></div>
+  <div class="stage-actions">
+    <label class="switch"><input type="checkbox" id="showFret" checked><span class="switch-track" aria-hidden="true"></span><span>Show the neck</span></label>
+    <button id="stop" class="btn">Stop</button>
+  </div>
 </main>
 
 <!-- 4. Report card: printed like the tube chart glued inside an amp -->

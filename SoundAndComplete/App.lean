@@ -24,11 +24,9 @@ def Rule.enabled : Rule → Bool
   | .startNear _ => true
   | .maxLeap _ => true
   | .chordToneOnBeat _ _ => true
-  | .turnaroundTarget _ _ => true
   | .avoid _ => true
   | .stayBetween _ _ => true
   | .maxNotesPerBar _ => true
-  | .syncopate => true
   | .leaveSpace _ => true
 
 /-- Does `answer` obey `rule`? -/
@@ -62,9 +60,8 @@ def chooseCall (ctx : Context) (rules : List Rule) (proposals : List Phrase) : O
   proposals.find? (callIsGood ctx rules)
 
 /-- One rule that can never be satisfied on its own, at this point in the song. -/
-def Rule.impossibleAlone (ctx : Context) : Rule → Bool
+def Rule.impossibleAlone (_ctx : Context) : Rule → Bool
   | .chordToneOnBeat _ b => !(1 ≤ b && b ≤ 8)
-  | .turnaroundTarget _ b => ctx.exchange == 2 && !(1 ≤ b && b ≤ 8)
   | .stayBetween low high => high < low || high < guitarLow || guitarHigh < low
   | .maxNotesPerBar n => n == 0
   | .leaveSpace k => phraseSlots ≤ k

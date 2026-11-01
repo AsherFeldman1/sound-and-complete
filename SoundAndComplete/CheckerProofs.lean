@@ -211,20 +211,12 @@ theorem ruleChecker_deadIsFinal (ctx : Context) (ci : CallInfo) (r : Rule) :
     split
     · exact passIf_deadIsFinal _
     · exact neverPass_deadIsFinal
-  | turnaroundTarget n b =>
-    simp only [ruleChecker]
-    split
-    · exact alwaysPass_deadIsFinal
-    · split
-      · exact passIf_deadIsFinal _
-      · exact neverPass_deadIsFinal
   | avoid n => exact failIf_deadIsFinal _
   | stayBetween low high => exact failIf_deadIsFinal _
   | maxNotesPerBar n =>
     refine deadIsFinal_of_fail _ (fun _ => rfl) (fun i m x hm => ?_)
       (fun m hm => by simp [ruleChecker, maxNotesPerBarChecker, hm])
     cases x <;> simp [ruleChecker, maxNotesPerBarChecker, hm]
-  | syncopate => exact passIf_deadIsFinal _
   | leaveSpace k => exact failIf_deadIsFinal _
 
 /-! ## Simple rules: each checker means its rule -/
@@ -257,11 +249,6 @@ theorem leaveSpace_correct (k : Nat) :
       RuleHolds ctx call answer (.leaveSpace k) := by
   simp only [ruleChecker, failIf_accepts, RuleHolds, decide_eq_false_iff_not, Nat.not_lt]
 
-theorem syncopate_correct :
-    (ruleChecker ctx (CallInfo.of call) .syncopate).accepts answer = true ↔
-      RuleHolds ctx call answer .syncopate := by
-  simp only [ruleChecker, passIf_accepts, RuleHolds, OnBeat, bne_iff_ne, ne_eq]
-
 theorem isToneB_iff (c : Chord) (t : ChordTone) (p : Pitch) :
     isToneB c t p = true ↔ IsTone c t p := by
   simp [isToneB, IsTone]
@@ -285,33 +272,6 @@ theorem chordToneOnBeat_correct (t : ChordTone) (b : Nat) :
     simp only [neverPass_accepts, Bool.false_eq_true, false_iff]
     rintro ⟨h1, h2, -⟩
     exact hb (by simp [h1, h2])
-
-theorem turnaroundTarget_correct (n b : Nat) :
-    (ruleChecker ctx (CallInfo.of call) (.turnaroundTarget n b)).accepts answer = true ↔
-      RuleHolds ctx call answer (.turnaroundTarget n b) := by
-  simp only [ruleChecker, RuleHolds, Context.IsTurnaround]
-  split
-  · rename_i hx
-    simp only [alwaysPass_accepts, true_iff]
-    intro h; rw [h] at hx; exact absurd hx (by decide)
-  · rename_i hx
-    have hx2 : ctx.exchange = 2 := by simpa using hx
-    simp only [hx2, forall_const]
-    split
-    · rename_i hb
-      simp only [Bool.and_eq_true, decide_eq_true_eq] at hb
-      rw [passIf_accepts]
-      constructor
-      · rintro ⟨j, p, hj, hg⟩
-        simp only [Bool.and_eq_true, beq_iff_eq] at hg
-        obtain ⟨rfl, hp⟩ := hg
-        exact ⟨hb.1, hb.2, p, hj, hp⟩
-      · rintro ⟨-, -, p, hj, hp⟩
-        exact ⟨beatSlot b, p, hj, by simp [hp]⟩
-    · rename_i hb
-      simp only [neverPass_accepts, Bool.false_eq_true, false_iff]
-      rintro ⟨h1, h2, -⟩
-      exact hb (by simp [h1, h2])
 
 end Simple
 
@@ -837,10 +797,10 @@ theorem seqAccept_iff (m : Mem) : (sequenceChecker ci n).accept m = true ↔ seq
   simp [sequenceChecker, seqAccept, and_assoc]
 
 /-- After matching `j` notes with shift `sh`, the rest passes exactly when the
-next `n - j` notes are the matching call notes moved by `sh`. -/
+next `n - j` notes are the matching call notes moved by `sh`, and `sh` is not 0. -/
 theorem seq_after (j : Nat) (sh : Int) (hj : j < n) (ps : List Pitch) :
     seqAccept ci n (ps.foldl (seqStep ci n) { count := j, shift := some sh }) ↔
-      n ≤ ci.pitches.length ∧ n - j ≤ ps.length ∧
+      n ≤ ci.pitches.length ∧ n - j ≤ ps.length ∧ sh ≠ 0 ∧
       (ps.take (n - j)).map (fun (p : Pitch) => (p : Int)) =
         ((ci.pitches.drop j).take (n - j)).map (fun (p : Pitch) => (p : Int) + sh) := by
   induction ps generalizing j with
@@ -862,19 +822,26 @@ theorem seq_after (j : Nat) (sh : Int) (hj : j < n) (ps : List Pitch) :
       rw [hdrop, hn]
       simp only [List.take_succ_cons, List.map_cons, List.cons.injEq, List.length_cons]
       by_cases hp : (p : Int) = ci.pitches[j] + sh
-      · have hstep : seqStep ci n { count := j, shift := some sh } p =
-            { count := j + 1, shift := if n ≤ j + 1 then none else some sh } := by
-          simp [seqStep, sequenceChecker, hget, hp, Nat.not_le.mpr hj]
-        rw [hstep]
-        by_cases hjn : n ≤ j + 1
+      · by_cases hjn : n ≤ j + 1
         · have hnj : n - (j + 1) = 0 := by omega
-          simp only [hjn, ↓reduceIte, hnj, List.take_zero, List.map_nil, and_true, hp]
-          rw [foldl_seqStep_fixed ci n _ (Or.inr (by simp only; omega))]
-          simp only [seqAccept, true_and]
-          constructor
-          · intro h; exact ⟨h.2, by omega⟩
-          · intro h; exact ⟨by omega, h.1⟩
-        · simp only [hjn, ↓reduceIte, hp, true_and]
+          simp only [hnj, List.take_zero, List.map_nil, and_true, hp]
+          by_cases hsh : sh = 0
+          · have hstep : seqStep ci n { count := j, shift := some sh } p = Mem.fail := by
+              simp [seqStep, sequenceChecker, hget, hp, Nat.not_le.mpr hj, hjn, hsh]
+            rw [hstep]
+            simp only [hfail, hsh, ne_eq, not_true_eq_false, false_and, and_false]
+          · have hstep : seqStep ci n { count := j, shift := some sh } p = { count := j + 1 } := by
+              simp [seqStep, sequenceChecker, hget, hp, Nat.not_le.mpr hj, hjn, hsh]
+            rw [hstep, foldl_seqStep_fixed ci n _ (Or.inr (by simp only; omega))]
+            simp only [seqAccept, true_and, hsh, ne_eq, not_false_eq_true, and_true]
+            constructor
+            · intro h; exact ⟨h.2, by omega⟩
+            · intro h; exact ⟨by omega, h.1⟩
+        · have hstep : seqStep ci n { count := j, shift := some sh } p =
+              { count := j + 1, shift := some sh } := by
+            simp [seqStep, sequenceChecker, hget, hp, Nat.not_le.mpr hj, hjn]
+          rw [hstep]
+          simp only [hp, true_and]
           rw [ih (j + 1) (by omega)]
           constructor
           · rintro ⟨h1, h2, h3⟩; exact ⟨h1, by omega, h3⟩
@@ -892,16 +859,18 @@ theorem seq_after (j : Nat) (sh : Int) (hj : j < n) (ps : List Pitch) :
       intro h; omega
 
 /-- From the start: the answer passes exactly when its first `n` notes are the
-call's first `n` notes moved by one shift. -/
+call's first `n` notes moved by one shift that is not 0. -/
 theorem seq_start (ps : List Pitch) :
     seqAccept ci n (ps.foldl (seqStep ci n) Mem.start) ↔
       n ≤ ci.pitches.length ∧ n ≤ ps.length ∧
-      ∃ sh : Int, (ps.take n).map (fun (p : Pitch) => (p : Int)) =
+      ∃ sh : Int, sh ≠ 0 ∧ (ps.take n).map (fun (p : Pitch) => (p : Int)) =
         (ci.pitches.take n).map (fun (p : Pitch) => (p : Int) + sh) := by
   by_cases hn0 : n = 0
   · subst hn0
     rw [foldl_seqStep_fixed ci 0 _ (Or.inr (Nat.zero_le _))]
-    simp [seqAccept, Mem.start]
+    simp only [seqAccept, Mem.start, Nat.zero_le, List.take_zero, List.map_nil, and_true,
+      true_and, ne_eq]
+    exact ⟨fun _ => ⟨1, by decide⟩, fun _ => trivial⟩
   cases ps with
   | nil =>
     simp only [List.foldl_nil, seqAccept, Mem.start, List.length_nil]
@@ -915,14 +884,6 @@ theorem seq_start (ps : List Pitch) :
       simp [seqAccept, Mem.fail]
     by_cases hc : 0 < ci.pitches.length
     · have hget : ci.pitches[0]? = some ci.pitches[0] := List.getElem?_eq_getElem hc
-      have hstep : seqStep ci n Mem.start p =
-          { count := 1, shift := if n ≤ 1 then none else some ((p : Int) - ci.pitches[0]) } := by
-        simp only [seqStep, sequenceChecker, Mem.start, hget, Bool.not_true, Bool.false_or,
-          Nat.le_zero, hn0, decide_false, Bool.false_eq_true, ↓reduceIte, Nat.zero_add]
-        split
-        · rfl
-        · rename_i h; exact absurd (by omega) h
-      rw [hstep]
       have hdrop := List.drop_eq_getElem_cons hc
       have htake : ci.pitches.take n = ci.pitches[0] :: (ci.pitches.drop 1).take (n - 1) := by
         conv => lhs; rw [← List.drop_zero (l := ci.pitches), hdrop]
@@ -937,20 +898,33 @@ theorem seq_start (ps : List Pitch) :
       · have hn1' : n = 1 := by omega
         subst hn1'
         simp only [Nat.sub_self, List.take_zero, List.map_nil, and_true]
-        rw [foldl_seqStep_fixed ci 1 _ (Or.inr (Nat.le_refl _))]
-        simp only [seqAccept, true_and, Nat.le_refl]
+        by_cases hsh : (p : Int) - ci.pitches[0] = 0
+        · have hstep : seqStep ci 1 Mem.start p = Mem.fail := by
+            simp [seqStep, sequenceChecker, Mem.start, hget, hsh]
+          rw [hstep]
+          simp only [hfail, false_iff, not_and, not_exists]
+          intro _ _ sh hsh0 hp
+          omega
+        · have hstep : seqStep ci 1 Mem.start p = { count := 1 } := by
+            simp [seqStep, sequenceChecker, Mem.start, hget, hsh]
+            omega
+          rw [hstep, foldl_seqStep_fixed ci 1 _ (Or.inr (Nat.le_refl _))]
+          simp only [seqAccept, true_and, Nat.le_refl]
+          constructor
+          · intro h; exact ⟨h, by omega, (p : Int) - ci.pitches[0], hsh, by omega⟩
+          · intro h; exact h.1
+      · have hstep : seqStep ci n Mem.start p =
+            { count := 1, shift := some ((p : Int) - ci.pitches[0]) } := by
+          simp [seqStep, sequenceChecker, Mem.start, hget, hn0, hn1]
+          omega
+        rw [hstep, seq_after ci n 1 _ (by omega)]
         constructor
-        · intro h; exact ⟨h, by omega, (p : Int) - ci.pitches[0], by omega⟩
-        · intro h; exact h.1
-      · simp only [hn1, ↓reduceIte]
-        rw [seq_after ci n 1 _ (by omega)]
-        constructor
-        · rintro ⟨h1, h2, h3⟩
-          exact ⟨h1, by omega, (p : Int) - ci.pitches[0], by omega, h3⟩
-        · rintro ⟨h1, h2, sh, hsh, h3⟩
+        · rintro ⟨h1, h2, hsh, h3⟩
+          exact ⟨h1, by omega, (p : Int) - ci.pitches[0], hsh, by omega, h3⟩
+        · rintro ⟨h1, h2, sh, hsh, hp, h3⟩
           have : sh = (p : Int) - ci.pitches[0] := by omega
           subst this
-          exact ⟨h1, by omega, h3⟩
+          exact ⟨h1, by omega, hsh, h3⟩
     · have hget : ci.pitches[0]? = none := List.getElem?_eq_none (by omega)
       have hstep : seqStep ci n Mem.start p = Mem.fail := by
         simp [seqStep, sequenceChecker, Mem.start, hget, hn0]

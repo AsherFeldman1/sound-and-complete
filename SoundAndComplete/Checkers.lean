@@ -100,7 +100,8 @@ def echoSomeRhythmChecker (ci : CallInfo) (k : Nat) : Checker Mem where
   accept m := k ≤ m.count
 
 /-- `sequence n`: the first note fixes the shift; each of the next `n - 1` notes
-must be the matching call note moved by that shift. -/
+must be the matching call note moved by that shift. A shift of 0 (an exact
+copy) fails once all `n` notes have matched. -/
 def sequenceChecker (ci : CallInfo) (n : Nat) : Checker Mem where
   init := Mem.start
   step _ m x :=
@@ -115,8 +116,10 @@ def sequenceChecker (ci : CallInfo) (n : Nat) : Checker Mem where
             | none => (p : Int) - c
             | some s => s
           if (p : Int) = c + sh then
-            -- Once all `n` notes match, the shift no longer matters: forget it.
-            { count := m.count + 1, shift := if n ≤ m.count + 1 then none else some sh }
+            -- Once all `n` notes match, check the shift is not 0, then forget it.
+            if n ≤ m.count + 1 then
+              (if sh = 0 then Mem.fail else { count := m.count + 1 })
+            else { count := m.count + 1, shift := some sh }
           else Mem.fail
   accept m := m.ok && n ≤ m.count && n ≤ ci.pitches.length
   dead m := !m.ok
@@ -191,14 +194,9 @@ def ruleChecker (ctx : Context) (ci : CallInfo) : Rule → Checker Mem
       if 1 ≤ b && b ≤ 8 then
         passIf fun i p => i == beatSlot b && isToneB (ctx.chordAt i) t p
       else neverPass
-  | .turnaroundTarget n b =>
-      if ctx.exchange != 2 then alwaysPass
-      else if 1 ≤ b && b ≤ 8 then passIf fun i p => i == beatSlot b && pitchClass p == n
-      else neverPass
   | .avoid n => failIf fun _ p => pitchClass p == n
   | .stayBetween low high => failIf fun _ p => !(low ≤ p && p ≤ high)
   | .maxNotesPerBar n => maxNotesPerBarChecker n
-  | .syncopate => passIf fun i _ => i % 3 != 0
   | .leaveSpace k => failIf fun i _ => i < k
 
 /-- Checks the "playable" part of an answer that the search does not already

@@ -20,9 +20,9 @@ namespace Blues
 -- The spec rejects these; so must the checkers.
 #guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 60)]) (.leaveSpace 3)
 #guard !checkRule ctx0 call1 answer1 (.chordToneOnBeat .root 5)
-#guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 57), (3, 60)]) .syncopate
+#guard !checkRule ctx0 call1 call1 (.sequence 2)
 #guard !checkRule ctx0 call1 call1 .sayLess
-#guard !checkRule ⟨2⟩ call1 answer1 (.turnaroundTarget 4 5)
+#guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 69), (3, 67)]) (.sequence 2)
 #guard !isPlayable (Phrase.ofNotes [])
 
 /-! ## One check per rule, pass and fail -/
@@ -33,6 +33,12 @@ namespace Blues
 -- sequence 3: E4 D4 C4 moved up 5 is A4 G4 F4.
 #guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 69), (5, 67), (7, 65)]) (.sequence 3)
 #guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 69), (5, 67), (7, 64)]) (.sequence 3)
+-- An exact copy (shift 0) fails; so does a copy of just the first note.
+#guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 64), (3, 62), (6, 60)]) (.sequence 3)
+#guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 64)]) (.sequence 1)
+#guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 65)]) (.sequence 1)
+-- sequence 0 asks for nothing.
+#guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 64)]) (.sequence 0)
 -- startNear 2: the call ends on E4 (64).
 #guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 62)]) (.startNear 2)
 #guard !checkRule ctx0 call1 (Phrase.ofNotes [(0, 61)]) (.startNear 2)
@@ -47,8 +53,6 @@ namespace Blues
 #guard !checkRule ⟨2⟩ call1 (Phrase.ofNotes [(12, 67)]) (.chordToneOnBeat .third 5)
 -- An out-of-range beat can never be satisfied.
 #guard !checkRule ctx0 call1 answer1 (.chordToneOnBeat .third 9)
--- turnaroundTarget does nothing outside the turnaround.
-#guard checkRule ctx0 call1 (Phrase.ofNotes [(0, 57)]) (.turnaroundTarget 4 5)
 
 /-! ## The search -/
 
@@ -79,7 +83,7 @@ def rulesHigh : List Rule := [.startNear 2, .stayBetween 52 64]
 
 /-! ## Grading and warnings -/
 
-#guard grade ctx0 call1 [.sayLess, .syncopate] answer1 == [(.sayLess, true), (.syncopate, true)]
+#guard grade ctx0 call1 [.sayLess, .sequence 2] answer1 == [(.sayLess, true), (.sequence 2, true)]
 #guard grade ctx0 call1 [.sayLess, .leaveSpace 6] answer1 == [(.sayLess, true), (.leaveSpace 6, false)]
 #guard knownConflict ctx0 [.echoRhythm, .maxLeap 3, .sayLess]
 #guard knownConflict ctx0 [.chordToneOnBeat .third 0]

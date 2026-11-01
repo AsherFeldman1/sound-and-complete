@@ -9,9 +9,6 @@ export const PHRASE_SLOTS = 24;
 // A minor blues scale, 2 octaves around the guitar's sweet spot: A C D Eb E G.
 const SCALE = [52, 55, 57, 60, 62, 63, 64, 67, 69, 72, 74, 75, 76];
 
-// Rhythm cells: note starts within one beat (slots 0,1,2). Shuffle-friendly.
-const CELLS = [[0], [0, 2], [2], [], [0], [0, 2], [2], []];
-
 /** Small deterministic random generator (mulberry32). */
 export function rng(seed) {
   let a = seed >>> 0;
@@ -24,31 +21,71 @@ export function rng(seed) {
   };
 }
 
-/** One 2-bar call: busy first bar, sparse second bar, ends on a strong note. */
+/**
+ * One 2-bar call, phrased like a blues player rather than one note per beat:
+ * it often starts off the beat (a pickup), plays one or two quick bursts of
+ * triplets, lands on a chord-friendly note it lets ring, and leaves space.
+ */
 export function generateCall(rand) {
   const pick = (xs) => xs[Math.floor(rand() * xs.length)];
   const phrase = new Array(PHRASE_SLOTS).fill(null);
-  let idx = 2 + Math.floor(rand() * 8); // index into SCALE
-  // Bar 1: 3-4 beats of rhythm cells; bar 2: one or two beats, then silence.
-  const beats = [0, 1, 2, 3].filter(() => rand() < 0.7);
-  while (beats.length < 2) beats.unshift(beats.length ? 0 : 1); // always start in bar 1
-  const bar2 = [4, 5].filter(() => rand() < 0.5);
-  if (bar2.length === 0) bar2.push(4);
-  let count = 0;
-  for (const b of [...beats, ...bar2]) {
-    for (const off of pick(CELLS)) {
-      if (count++ >= 7) break; // calls stay singable: at most 7 notes
-      const step = pick([-2, -1, -1, 0, 1, 1, 2]);
-      idx = Math.max(0, Math.min(SCALE.length - 1, idx + step));
-      phrase[b * 3 + off] = SCALE[idx];
-    }
+  let idx = 4 + Math.floor(rand() * 6); // index into SCALE: start mid-neck
+  const dir = rand() < 0.65 ? -1 : 1; // blues licks mostly fall
+  const place = (slot) => {
+    if (slot >= 0 && slot < PHRASE_SLOTS) phrase[slot] = SCALE[idx];
+  };
+  const step = () => {
+    // Mostly scale steps in the lick's direction, sometimes a repeat or a turn back.
+    idx = Math.max(0, Math.min(SCALE.length - 1, idx + pick([dir, dir, dir, 0, -dir, 2 * dir])));
+  };
+  // Burst 1: a pickup on the "let" or just after the beat, then a quick run.
+  let slot = pick([2, 2, 1, 0, 5, 3]);
+  const burst1 = pick([3, 3, 4, 4, 5]);
+  for (let k = 0; k < burst1; k++) { place(slot); step(); slot++; }
+  // Sometimes a short rest and a second, shorter burst (call-and-response inside the call).
+  if (rand() < 0.55) {
+    slot += pick([2, 3, 4]);
+    const burst2 = pick([2, 2, 3]);
+    for (let k = 0; k < burst2 && slot < 15; k++) { place(slot); step(); slot++; }
   }
-  // Land the last note on a chord-friendly note (A, C, E or G).
-  let last = -1;
-  for (let i = 0; i < PHRASE_SLOTS; i++) if (phrase[i] !== null) last = i;
-  if (last < 0) phrase[0] = 57;
-  else phrase[last] = pick([57, 60, 64, 67, 69]);
+  // Land on A, C, E or G, on or just before a beat, and let it ring: nothing after it.
+  slot = Math.min(slot + pick([0, 1, 2]), 17);
+  const land = pick([57, 60, 64, 67, 69, 72]);
+  const lastSet = phrase.findLastIndex((m) => m !== null);
+  if (slot <= lastSet) slot = lastSet + 1;
+  phrase[Math.min(slot, PHRASE_SLOTS - 1)] = land;
   return phrase;
+}
+
+/**
+ * How lick-like a call's rhythm is (higher is better). Not part of anything
+ * proven: it only decides which of several calls that pass the Lean gate to try
+ * first. Rewards quick runs, a pickup, room to breathe and a held last note;
+ * penalises notes spread out evenly, one per beat.
+ */
+export function tasteScore(phrase) {
+  const on = phrase.map((m, i) => (m === null ? -1 : i)).filter((i) => i >= 0);
+  if (on.length === 0) return -10;
+  let score = 0;
+  const gaps = on.slice(1).map((s, i) => s - on[i]);
+  score += Math.min(4, gaps.filter((g) => g === 1).length); // quick triplet runs
+  if (on[0] % 3 !== 0) score += 1; // starts with a pickup / off the beat
+  const tail = PHRASE_SLOTS - 1 - on[on.length - 1];
+  if (Math.max(tail, ...gaps) >= 6) score += 2; // real space somewhere
+  if (tail >= 4) score += 1; // the last note rings
+  if (gaps.length >= 2) {
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    const sd = Math.sqrt(gaps.reduce((a, g) => a + (g - mean) ** 2, 0) / gaps.length);
+    if (sd / mean < 0.35) score -= 3; // evenly spread: sounds like an exercise
+  }
+  if (on.filter((s) => s % 3 === 0).length / on.length > 0.7) score -= 1; // all on the beat
+  if (on.length < 3 || on.length > 9) score -= 2;
+  return score;
+}
+
+/** Calls sorted most lick-like first (stable). */
+export function byTaste(calls) {
+  return calls.map((c, i) => [tasteScore(c), i, c]).sort((a, b) => b[0] - a[0] || a[1] - b[1]).map((x) => x[2]);
 }
 
 /** `n` calls from a seed. */

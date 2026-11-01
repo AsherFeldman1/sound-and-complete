@@ -35,8 +35,9 @@ inductive Rule
   A looser echo of the call's rhythm. -/
   | echoSomeRhythm (k : Nat)
   /-- Your first `n` notes are the call's first `n` notes, all moved up or down
-  by the same amount (the same melody shape, starting somewhere else). Moving by
-  zero is allowed. Rhythm is free. The app allows `n` from 1 to 4. -/
+  by the same nonzero amount (the same melody shape, starting somewhere else).
+  Copying the call exactly does not count. Rhythm is free. The app allows `n`
+  from 1 to 4. -/
   | sequence (n : Nat)
   /-- You play fewer notes than the call. -/
   | sayLess
@@ -48,18 +49,12 @@ inductive Rule
   /-- A note starts exactly on beat `beat` (1 to 8, across your two bars), and it
   is chord tone `tone` of the chord under it. -/
   | chordToneOnBeat (tone : ChordTone) (beat : Nat)
-  /-- On the turnaround only: a note starts exactly on beat `beat` (1 to 8), and
-  its note name is `noteName` (C = 0, ..., A = 9). On other exchanges this rule
-  does nothing. -/
-  | turnaroundTarget (noteName : Nat) (beat : Nat)
   /-- You never play this note name (C = 0, ..., A = 9). -/
   | avoid (noteName : Nat)
   /-- Every note is between these two notes, inclusive (a hand position). -/
   | stayBetween (low high : Pitch)
   /-- No bar of your answer has more than this many notes. -/
   | maxNotesPerBar (n : Nat)
-  /-- At least one note starts off the beat. -/
-  | syncopate
   /-- No note starts in the first `slots` slots. You wait before answering.
   (3 slots = 1 beat.) -/
   | leaveSpace (slots : Nat)
@@ -73,7 +68,7 @@ def RuleHolds (ctx : Context) (call answer : Phrase) : Rule → Prop
       k ≤ ((onsetSlots call).filter (· ∈ onsetSlots answer)).length
   | .sequence n =>
       n ≤ (pitches call).length ∧ n ≤ (pitches answer).length ∧
-      ∃ shift : Int,
+      ∃ shift : Int, shift ≠ 0 ∧
         ((pitches answer).take n).map (fun (p : Pitch) => (p : Int)) =
         ((pitches call).take n).map (fun (p : Pitch) => (p : Int) + shift)
   | .sayLess =>
@@ -86,9 +81,6 @@ def RuleHolds (ctx : Context) (call answer : Phrase) : Rule → Prop
   | .chordToneOnBeat t b =>
       1 ≤ b ∧ b ≤ 8 ∧
       ∃ p, (beatSlot b, p) ∈ notes answer ∧ IsTone (ctx.chordAt (beatSlot b)) t p
-  | .turnaroundTarget n b =>
-      ctx.IsTurnaround →
-        1 ≤ b ∧ b ≤ 8 ∧ ∃ p, (beatSlot b, p) ∈ notes answer ∧ pitchClass p = n
   | .avoid n =>
       ∀ p ∈ pitches answer, pitchClass p ≠ n
   | .stayBetween low high =>
@@ -96,8 +88,6 @@ def RuleHolds (ctx : Context) (call answer : Phrase) : Rule → Prop
   | .maxNotesPerBar n =>
       ((notes answer).filter (·.1 < slotsPerBar)).length ≤ n ∧
       ((notes answer).filter (·.1 ≥ slotsPerBar)).length ≤ n
-  | .syncopate =>
-      ∃ s p, (s, p) ∈ notes answer ∧ ¬ OnBeat s
   | .leaveSpace k =>
       ∀ s p, (s, p) ∈ notes answer → k ≤ s
 

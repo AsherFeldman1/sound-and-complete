@@ -80,7 +80,8 @@ Status: all promises proven for all 13 rules, with no `sorry` (`make audit`).
 The band plays recorded samples. `make install` downloads them (`web/samples/fetch.mjs`; the list is in `web/audio/sounds.js`).
 Pick the instruments on the **Band sounds** page (`/sounds.html`).
 
-- Lead guitars "Epiphone" and "Archtop": [Karoryfer](https://github.com/sfzinstruments) Emilyguitar and Shinyguitar by D. Smolken (CC0). They were recorded direct, so the app plays them through its own amp and speaker model.
+- Lead guitars "Epiphone" and "Archtop": [Karoryfer](https://github.com/sfzinstruments) Emilyguitar and Shinyguitar by D. Smolken (CC0). They were recorded direct, so the app plays them through the amp below.
+- Amp: a Fender Deluxe Reverb [Neural Amp Modeler](https://github.com/sdatkinson/neural-amp-modeler) capture, a Celestion speaker cabinet impulse response and a spring reverb impulse response (`web/tone/`), from [TONE3000](https://www.tone3000.com)'s [neural-amp-modeler-wasm](https://github.com/tone-3000/neural-amp-modeler-wasm) demo library (MIT), run in the browser by its WebAssembly engine (npm `neural-amp-modeler-wasm`, MIT). Both your guitar and the AI's guitar play through it.
 - Other guitars, electric bass, organ: [midi-js-soundfonts](https://github.com/gleitz/midi-js-soundfonts) by Benjamin Gleitzman. The FluidR3 GM set is MIT; the MusyngKite set is CC BY-SA 3.0.
 - Upright bass: d. smolken's double bass, via [smpldsnds](https://github.com/smpldsnds) (CC0).
 - Rhodes: jRhodes3d by Jeff Learman, via smpldsnds (samples CC BY-NC: non-commercial use only).

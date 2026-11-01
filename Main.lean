@@ -62,11 +62,9 @@ def parseRule (j : Json) : Except String Rule := do
   | "startNear" => return .startNear (← nat "frets")
   | "maxLeap" => return .maxLeap (← nat "frets")
   | "chordToneOnBeat" => return .chordToneOnBeat (← parseTone (← j.getObjValAs? String "tone")) (← nat "beat")
-  | "turnaroundTarget" => return .turnaroundTarget (← nat "note") (← nat "beat")
   | "avoid" => return .avoid (← nat "note")
   | "stayBetween" => return .stayBetween (← nat "low") (← nat "high")
   | "maxNotesPerBar" => return .maxNotesPerBar (← nat "n")
-  | "syncopate" => pure .syncopate
   | "leaveSpace" => return .leaveSpace (← nat "slots")
   | r => throw s!"unknown rule {r}"
 
@@ -129,7 +127,7 @@ def showPhrase (ph : Phrase) : String :=
 def demo : IO Unit := do
   let ctx : Context := ⟨0⟩
   let rules : List Rule :=
-    [.startNear 2, .sayLess, .maxLeap 5, .chordToneOnBeat .third 5, .stayBetween 52 69, .syncopate]
+    [.startNear 2, .sayLess, .maxLeap 5, .chordToneOnBeat .third 5, .stayBetween 52 69, .leaveSpace 3]
   IO.println "A minor blues, first exchange: you answer in bars 3-4 over Am7."
   IO.println s!"Your rules: {repr rules}"
   if knownConflict ctx rules then

@@ -115,3 +115,16 @@ test("renderPluck: finite, bounded, decaying, and in tune", () => {
     assert.ok(Math.abs(rate - 1) < 0.05);
   }
 });
+
+test("articulate: a quick run is one pick plus hammer-ons; held target gets a bend", async () => {
+  const { phraseNotes, articulate } = await import("./band.js");
+  const ph = new Array(24).fill(null);
+  [[2, 67], [3, 69], [4, 72], [5, 71], [6, 72], [9, 69]].forEach(([s, m]) => (ph[s] = m));
+  const groups = articulate(phraseNotes(ph, 80), 0.75);
+  assert.equal(groups.length, 2);
+  assert.deepEqual(groups[0].moves.map((m) => m.midi), [69, 72, 71, 72]);
+  assert.equal(groups[1].bend, -2); // the held A, bent up from G
+  // a repeated pitch is picked again, never "hammered"
+  const rep = new Array(24).fill(null); rep[0] = 64; rep[1] = 64;
+  assert.equal(articulate(phraseNotes(rep, 80), 0.75).length, 2);
+});

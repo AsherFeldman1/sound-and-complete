@@ -18,7 +18,7 @@ import { fileURLToPath } from "node:url";
 
 import { LeanBridge } from "./lean.js";
 import { proposeCalls, llmConfigured } from "./llm.js";
-import { generateCalls, answerIdeas } from "./callgen.js";
+import { generateCalls, answerIdeas, byTaste } from "./callgen.js";
 import { CHORDS, CHORD_PCS, EXCHANGES } from "./rules.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -66,9 +66,10 @@ function sendJson(res, status, obj) {
 /** Gate one exchange: try the candidates in order, the proven gate picks. */
 async function gateExchange(exchange, rules, llmCandidates) {
   const tries = [
-    { source: "claude", calls: llmCandidates },
-    { source: "built-in", calls: generateCalls(8) },
-    { source: "built-in", calls: generateCalls(32) },
+    // Most lick-like first (tasteScore). Order only: the Lean gate still decides.
+    { source: "claude", calls: byTaste(llmCandidates) },
+    { source: "built-in", calls: byTaste(generateCalls(8)) },
+    { source: "built-in", calls: byTaste(generateCalls(32)) },
   ];
   const rejected = [];
   for (const { source, calls } of tries) {

@@ -179,9 +179,6 @@ def Context.barOfSlot (ctx : Context) (s : Nat) : Nat :=
 /-- The chord under slot `s` of your answer. -/
 def Context.chordAt (ctx : Context) (s : Nat) : Chord := chordOfBar (ctx.barOfSlot s)
 
-/-- Your answer falls on the turnaround (bars 11–12). -/
-def Context.IsTurnaround (ctx : Context) : Prop := ctx.exchange = 2
-
 -- In the turnaround, bar 2 of the answer is song bar 12: E7.
 example : (Context.chordAt ⟨2⟩ 12) = E7 := rfl
 

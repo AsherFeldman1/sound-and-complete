@@ -38,11 +38,9 @@ def rules1 : List Rule :=
   , .startNear 2           -- D4 is 2 frets from the call's last note E4
   , .maxLeap 5
   , .chordToneOnBeat .third 5   -- C4 on beat 5; C is the third of Am7
-  , .turnaroundTarget 4 1  -- not the turnaround, so this does nothing here
   , .avoid 10              -- no B♭
   , .stayBetween 52 69
   , .maxNotesPerBar 2
-  , .syncopate             -- C4 on slot 8 is off the beat
   , .leaveSpace 3 ]        -- first note on slot 3
 
 /-! ## 1. The rules can be satisfied -/
@@ -53,19 +51,17 @@ theorem answer1_satisfies : Satisfies ctx0 call1 rules1 answer1 := by
   · simp [pitches, answer1_notes, OnGuitar, guitarLow, guitarHigh]
   · intro r hr
     simp only [rules1, List.mem_cons, List.not_mem_nil, or_false] at hr
-    rcases hr with h | h | h | h | h | h | h | h | h | h | h | h <;> subst h <;>
+    rcases hr with h | h | h | h | h | h | h | h | h | h <;> subst h <;>
       simp only [RuleHolds, onsetSlots, pitches, call1_notes, answer1_notes]
     · decide
-    · exact ⟨by decide, by decide, -2, by decide⟩
+    · exact ⟨by decide, by decide, -2, by decide, by decide⟩
     · decide
     · simp [distance]
     · simp [NoLeapBiggerThan, distance]
     · refine ⟨by decide, by decide, 60, by decide, by unfold IsTone; decide⟩
-    · intro h; simp [Context.IsTurnaround, ctx0] at h
     · simp [pitchClass]
     · simp
     · decide
-    · exact ⟨8, 60, by simp, by simp [OnBeat]⟩
     · intro s p h; simp at h; omega
 
 /-- So `call1` is a call the app may play under `rules1`. -/
@@ -89,28 +85,23 @@ example : ¬ RuleHolds ctx0 call1 answer1 (.chordToneOnBeat .root 5) := by
   subst hp
   revert ht; unfold IsTone; decide
 
-/-- Every note on a beat: breaks "syncopate". -/
-example : ¬ RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 57), (3, 60)]) .syncopate := by
-  simp only [RuleHolds]
-  rintro ⟨s, p, hm, hb⟩
-  have : notes (Phrase.ofNotes [(0, 57), (3, 60)]) = [(0, 57), (3, 60)] := by decide
-  rw [this] at hm
-  simp at hm
-  rcases hm with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ <;> simp [OnBeat] at hb
+/-- Copying the call exactly breaks "sequence": the move must not be zero. -/
+example : ¬ RuleHolds ctx0 call1 call1 (.sequence 2) := by
+  simp only [RuleHolds, pitches, call1_notes]
+  rintro ⟨-, -, shift, hs, h⟩
+  simp at h
+  omega
+
+/-- The call's first two notes, E4 D4, moved up 5 to A4 G4: this obeys
+"sequence 2". -/
+example : RuleHolds ctx0 call1 (Phrase.ofNotes [(0, 69), (3, 67)]) (.sequence 2) := by
+  have : notes (Phrase.ofNotes [(0, 69), (3, 67)]) = [(0, 69), (3, 67)] := by decide
+  simp only [RuleHolds, pitches, call1_notes, this]
+  exact ⟨by decide, by decide, 5, by decide, by decide⟩
 
 /-- Four notes do not "say less" than a four-note call. -/
 example : ¬ RuleHolds ctx0 call1 call1 .sayLess := by
   simp [RuleHolds]
-
-/-- On the turnaround, missing the target note breaks the turnaround rule.
-Here the target is E (4) on beat 5, but `answer1` plays C there. -/
-example : ¬ RuleHolds ⟨2⟩ call1 answer1 (.turnaroundTarget 4 5) := by
-  simp only [RuleHolds, answer1_notes]
-  intro h
-  obtain ⟨_, _, p, hp, hpc⟩ := h rfl
-  simp [beatSlot] at hp
-  subst hp
-  revert hpc; decide
 
 /-- The empty answer is never playable. You have to play something. -/
 example : ¬ Playable (Phrase.ofNotes []) := by

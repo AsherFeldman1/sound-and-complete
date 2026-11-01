@@ -55,12 +55,6 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   sorry
 
-theorem chooseCall_has_answer (ctx : Context) (rules : List Rule) (proposals : List Phrase)
-    (call : Phrase) :
-    chooseCall ctx rules proposals = some call →
-      ∃ answer, findAnswer ctx call rules = some answer ∧ Satisfies ctx call rules answer := by
-  sorry
-
 theorem chooseCall_skips_only_bad (ctx : Context) (rules : List Rule) (proposals : List Phrase)
     (call : Phrase) :
     chooseCall ctx rules proposals = some call →

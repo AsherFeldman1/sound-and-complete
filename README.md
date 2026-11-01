@@ -71,8 +71,7 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 5. **Useful gate**: it only rejects calls that are unplayable or can't be answered (`chooseCall_rejects_only_bad`).
 6. **Impossible rules, decided**: "no call can work with these rules" is said exactly when it is true. A found call is a real good call with a real answer (`findCall_sound`), and if any call could work, one is found (`findCall_complete`).
 7. **Honest hint**: the "answer that keeps every rule" shown after a song does keep every rule (`isCorrectAnswer_iff`).
-8. **A played call always has an answer in hand** (`chooseCall_has_answer`).
-9. **The gate skips only bad calls**, so its count of calls turned down is honest (`chooseCall_skips_only_bad`).
+8. **The gate skips only bad calls**, so its count of calls turned down is honest (`chooseCall_skips_only_bad`).
 
 The promises hold for all 11 rules, with no `sorry` (`make audit`).
 

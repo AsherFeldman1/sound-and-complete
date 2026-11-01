@@ -46,10 +46,6 @@ example : (Rule.sayLess, true) ∈ grade ctx0 call1 rules1 answer1 := by
   have hs : RuleHolds ctx0 call1 answer1 .sayLess := answer1_satisfies.2 _ (by decide)
   exact (grade_correct ctx0 call1 rules1 answer1 (by decide) .sayLess (by decide)).1.mpr hs
 
-/-- When the gate plays `call1`, the search has a real answer to it. -/
-example : ∃ a, findAnswer ctx0 call1 rules1 = some a ∧ Satisfies ctx0 call1 rules1 a :=
-  chooseCall_has_answer ctx0 rules1 [call1] call1 call1_passes_gate
-
 /-- With a useless proposal first, the gate skips it and takes `call1`. -/
 theorem empty_then_call1_passes_gate : chooseCall ctx0 rules1 [[], call1] = some call1 := by
   have hbad : callIsGood ctx0 rules1 [] = false := by

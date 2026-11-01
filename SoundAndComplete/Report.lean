@@ -24,7 +24,6 @@ open Blues
 #audit_axioms findAnswer_complete
 #audit_axioms chooseCall_safe
 #audit_axioms chooseCall_rejects_only_bad
-#audit_axioms chooseCall_has_answer
 #audit_axioms chooseCall_skips_only_bad
 #audit_axioms findCall_sound
 #audit_axioms findCall_complete

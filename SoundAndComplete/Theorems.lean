@@ -203,20 +203,6 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
   rw [(callIsGood_iff ctx rules call).mpr hgood] at this
   exact this rfl
 
-/-- **In plain words:** if the gate picks a call, the search has a real answer to
-it, and that answer keeps every rule.
-
-**Why you care:** this joins the gate to the hint. The app plays the call and
-shows this answer, so the answer is never missing for a call that was played. -/
-theorem chooseCall_has_answer (ctx : Context) (rules : List Rule) (proposals : List Phrase)
-    (call : Phrase) :
-    chooseCall ctx rules proposals = some call →
-      ∃ answer, findAnswer ctx call rules = some answer ∧ Satisfies ctx call rules answer := by
-  intro h
-  have hans := (chooseCall_safe ctx rules proposals call h).2.2
-  obtain ⟨answer, ha⟩ := Option.isSome_iff_exists.mp (findAnswer_complete ctx call rules hans)
-  exact ⟨answer, ha, findAnswer_sound ctx call rules answer ha⟩
-
 /-- **In plain words:** every proposal before the chosen call is bad. The gate
 does not skip a good call.
 

@@ -10,7 +10,6 @@
     "Blues.findAnswer_complete",
     "Blues.chooseCall_safe",
     "Blues.chooseCall_rejects_only_bad",
-    "Blues.chooseCall_has_answer",
     "Blues.chooseCall_skips_only_bad",
     "Blues.findCall_sound",
     "Blues.findCall_complete",

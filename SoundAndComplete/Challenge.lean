@@ -55,6 +55,13 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
       ∀ call ∈ proposals, ¬ GoodCall ctx rules call := by
   sorry
 
+theorem chooseCall_eq_some_iff (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call ↔
+      ∃ before after, proposals = before ++ call :: after ∧
+        GoodCall ctx rules call ∧ ∀ bad ∈ before, ¬ GoodCall ctx rules bad := by
+  sorry
+
 theorem findCall_sound (ctx : Context) (rules : List Rule) (call answer : Phrase) :
     findCall ctx rules = some (call, answer) →
       GoodCall ctx rules call ∧ Satisfies ctx call rules answer := by

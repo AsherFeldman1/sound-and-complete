@@ -236,6 +236,6 @@ const server = http.createServer((req, res) => {
 lean.start(); // fail fast if the Lean program is missing
 server.listen(PORT, HOST, () => {
   console.log(`Serving ${ROOT}`);
-  console.log(llmConfigured() ? `LLM: Claude` : `LLM: not configured (set ANTHROPIC_API_KEY); using built-in calls`);
+  console.log(llmConfigured() ? `LLM: Claude` : `LLM: not configured (set ANTHROPIC_API_KEY); using the calls the proof finds`);
   console.log(`Open http://localhost:${PORT}`);
 });

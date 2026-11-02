@@ -1,6 +1,6 @@
-// callgen.js: built-in blues call generator, used when no LLM is available
-// (no API key, offline, or the LLM is slow). Pure and seedable, so it can be
-// tested. The Lean gate checks these calls exactly like the LLM's.
+// callgen.js: blues phrases written in plain JavaScript, not proven. `answerIdeas`
+// gives candidate answers and `byTaste` puts Claude's calls in order. The proven
+// Lean checks still decide. Pure and seedable, so it can be tested.
 //
 // Phrase = 24 entries (2 bars of shuffle triplets), each null or a MIDI note.
 

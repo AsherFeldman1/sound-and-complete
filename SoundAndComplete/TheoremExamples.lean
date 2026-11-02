@@ -46,6 +46,22 @@ example : (Rule.sayLess, true) ∈ grade ctx0 call1 rules1 answer1 := by
   have hs : RuleHolds ctx0 call1 answer1 .sayLess := answer1_satisfies.2 _ (by decide)
   exact (grade_correct ctx0 call1 rules1 answer1 (by decide) .sayLess (by decide)).1.mpr hs
 
+/-- The gate's pick fits the exact description: `call1` is good. -/
+example : GoodCall ctx0 rules1 call1 := by
+  obtain ⟨-, -, -, hgood, -⟩ := (chooseCall_eq_some_iff ctx0 rules1 [call1] call1).mp call1_passes_gate
+  exact hgood
+
+/-- A proposal with no slots is not a good call. -/
+theorem emptyPhrase_bad : ¬ GoodCall ctx0 rules1 [] := fun h => by
+  have hlen := h.1.1
+  simp [phraseSlots] at hlen
+
+/-- With a bad proposal first, the gate still picks `call1`: `call1` is good, and
+the only proposal before it is bad. -/
+theorem first_good_wins : chooseCall ctx0 rules1 [[], call1] = some call1 :=
+  (chooseCall_eq_some_iff ctx0 rules1 [[], call1] call1).mpr
+    ⟨[[]], [], rfl, call1_good, by simpa using emptyPhrase_bad⟩
+
 /-! ## A call the gate rejects -/
 
 /-- Rules that can never hold together: echo exactly, but play fewer notes. -/

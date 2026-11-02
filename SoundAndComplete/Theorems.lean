@@ -14,7 +14,9 @@ checked (`Search.lean`, `Checkers.lean`, `App.lean`, `CallSearch.lean`). If you
 agree with the spec and with these statements, you can trust the app without
 reading any proof.
 
-The LLM is not trusted anywhere. It only proposes calls; `chooseCall` decides.
+The LLM is not trusted anywhere. A call it proposes plays only if `chooseCall`
+accepts it. If no proposal passes, the app plays the call `findCall` found. Both
+are proven good.
 
 The promises cover all 11 rules, for every value of their settings. Each one is
 also tried on a real example in `TheoremExamples.lean`.
@@ -116,8 +118,8 @@ theorem isCorrectAnswer_iff (ctx : Context) (call : Phrase) (rules : List Rule)
 play", that answer really is 24 slots long, playable on a guitar, and obeys
 every one of your rules.
 
-**Why you care:** the app shows this answer as a hint after you play. It is
-also the evidence that the call was fair. -/
+**Why you care:** this answer is the evidence that the call was fair. The app
+shows it after you play, unless a more musical answer passes `isCorrectAnswer`. -/
 theorem findAnswer_sound (ctx : Context) (call : Phrase) (rules : List Rule)
     (answer : Phrase) :
     findAnswer ctx call rules = some answer → Satisfies ctx call rules answer := by
@@ -170,9 +172,9 @@ theorem callIsGood_iff (ctx : Context) (rules : List Rule) (call : Phrase) :
 
 /-! ## 4. The gate: the LLM can never hand you an impossible call -/
 
-/-- **In plain words:** whatever the LLM proposes, a call the app actually
-plays (1) is one of the LLM's proposals, (2) is playable on a guitar, and
-(3) has at least one answer that obeys all your rules.
+/-- **In plain words:** whatever the LLM proposes, a call the gate picks (1) is
+one of the LLM's proposals, (2) is playable on a guitar, and (3) has at least
+one answer that obeys all your rules.
 
 **Why you care:** this is the headline promise. The LLM can produce anything,
 including calls that make your rules impossible. None of those ever reaches
@@ -201,6 +203,35 @@ theorem chooseCall_rejects_only_bad (ctx : Context) (rules : List Rule)
   have := List.find?_eq_none.mp h call hc
   rw [(callIsGood_iff ctx rules call).mpr hgood] at this
   exact this rfl
+
+/-- **In plain words:** the gate picks a call exactly when that call is good and
+every proposal before it is bad. So it picks the first good proposal.
+
+**Why you care:** the two theorems above would also allow a wrong gate, one that
+picks the last good call. That gate would throw away good calls and ignore the
+order the app puts them in. This theorem rules it out. It also says the check is
+exact: a bad call is never picked, and a good call is never skipped.
+
+**What it does not say:** that the first good proposal sounds best. The app
+orders Claude's calls by taste, and that order is not proven. -/
+theorem chooseCall_eq_some_iff (ctx : Context) (rules : List Rule) (proposals : List Phrase)
+    (call : Phrase) :
+    chooseCall ctx rules proposals = some call ↔
+      ∃ before after, proposals = before ++ call :: after ∧
+        GoodCall ctx rules call ∧ ∀ bad ∈ before, ¬ GoodCall ctx rules bad := by
+  unfold chooseCall
+  rw [List.find?_eq_some_iff_append]
+  constructor
+  · rintro ⟨hcall, before, after, rfl, hbad⟩
+    refine ⟨before, after, rfl, (callIsGood_iff ctx rules call).mp hcall, fun c hc hgood => ?_⟩
+    have := hbad c hc
+    rw [(callIsGood_iff ctx rules c).mpr hgood] at this
+    simp at this
+  · rintro ⟨before, after, rfl, hgood, hbad⟩
+    refine ⟨(callIsGood_iff ctx rules call).mpr hgood, before, after, rfl, fun c hc => ?_⟩
+    cases h : callIsGood ctx rules c with
+    | false => rfl
+    | true => exact absurd ((callIsGood_iff ctx rules c).mp h) (hbad c hc)
 
 /-! ## 5. Impossible rules: decided before you play -/
 
@@ -242,7 +273,7 @@ is true. There is no list of known bad combinations; the warning is decided by
 proof, for every rule set.
 
 **What it does not say:** that the call it finds sounds good. It is only
-evidence. The calls you hear still come from the LLM, through the gate. -/
+evidence. You hear this call only when no LLM proposal passes the gate. -/
 theorem findCall_complete (ctx : Context) (rules : List Rule) :
     CallExists ctx rules → (findCall ctx rules).isSome := by
   rintro ⟨c, hc, a, ha⟩

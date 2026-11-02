@@ -5,16 +5,16 @@ Blues call-and-response practice in A minor. You pick rules for your playing
 on beat 1 of bar 2"). An LLM plays a 2-bar call over a shuffle backing track.
 You answer on your guitar. At the end you see which rules you kept.
 
-The LLM is not trusted. Before a call is played, a checker written in Lean
-confirms that at least one answer obeys all your rules. The proofs show this
-check is exact: it never lets an unanswerable call through, and never rejects
-a playable call that can be answered.
+The LLM is not trusted. Before its call is played, a checker written in Lean
+confirms that at least one answer obeys all your rules. If none of its calls
+passes, the app plays a call the proof found. The proofs show this check is
+exact: the gate picks the first call that is playable and can be answered.
 
 ```
 make install && make run    # build, then open the app at http://localhost:8765
 make audit                  # what each theorem depends on, and its axioms
 make comparator             # lake check + lake comparator in Docker (needs Docker)
-make test                   # browser-side tests (audio pipeline, call generator)
+make test                   # browser-side tests (audio, rules, fretboard)
 make demo                   # terminal demo of the Lean core
 make bench                  # time the answer search
 ```
@@ -66,8 +66,8 @@ Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 1. **Each checker means its rule** (`ruleChecker_correct`).
 2. **Honest report card**: each mark is right (`grade_correct`), and each mark sits next to its own rule (`grade_keeps_rule_order`).
 3. **Exact search**: suggested answers are real (`findAnswer_sound`), and none are missed (`findAnswer_complete`).
-4. **Safe gate**: every call the app plays can be answered, whatever the LLM proposes (`chooseCall_safe`).
-5. **Useful gate**: it only rejects calls that are unplayable or can't be answered (`chooseCall_rejects_only_bad`).
+4. **Safe calls**: every call the app plays can be answered, whatever the LLM proposes. That covers a call the gate picks (`chooseCall_safe`) and the call the proof found (`findCall_sound`).
+5. **Exact gate**: it picks the first proposal that is playable and can be answered (`chooseCall_eq_some_iff`). If it picks none, every proposal was bad (`chooseCall_rejects_only_bad`).
 6. **Impossible rules, decided**: "no call can work with these rules" is said exactly when it is true. A found call is a real good call with a real answer (`findCall_sound`), and if any call could work, one is found (`findCall_complete`).
 7. **Honest hint**: the "answer that keeps every rule" shown after a song does keep every rule (`isCorrectAnswer_iff`).
 
@@ -82,7 +82,9 @@ at least one note.
 - Pitch and onset detection: the notes and timings the app hears are what you played.
 - Snapping your timing to the 24-slot grid.
 - The JSON bridge (`Main.lean`, `web/server.js`, `web/lean.js`) that passes data to and from the Lean core.
-- The LLM is **not** trusted: its calls only play if the proven gate accepts them. The
+- The LLM is **not** trusted: its calls only play if the proven gate accepts them. If none
+  passes, the server plays the call `findCall` found. The server chooses between those two,
+  and both are proven good. The
   "answer that keeps every rule" comes from unproven code, but the proven check picks it
   (falling back to the proven search's own answer).
 - The Lean compiler, runtime and kernel. The proofs use only Lean's three standard
@@ -107,7 +109,7 @@ If the samples are missing, the band falls back to its built-in synthesized soun
 
 ## Comparator
 
-`SoundAndComplete/Challenge.lean` restates the ten main theorems with no
+`SoundAndComplete/Challenge.lean` restates the eleven main theorems with no
 proof; `comparator.json` lists them and allows only the standard axioms
 (`propext`, `Quot.sound`, `Classical.choice`). `make comparator` runs
 `lake check` and `lake comparator` in a Linux container (they need the Linux

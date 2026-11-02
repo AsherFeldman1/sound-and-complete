@@ -4,7 +4,7 @@
 // gate picks ones you can answer -> play the 12-bar song (call, you answer,
 // three times) -> the Lean grader checks your answers -> report card.
 //
-// All decisions (conflict warning, gate, hint answer, grading) come from the
+// All decisions (whether the rules are possible, gate, hint answer, grading) come from the
 // server, which asks the Lean program. This file is UI, audio and timing.
 
 import { RULES, NOTE_NAMES, midiName, describeRule, defaultRule, CHORDS, EXCHANGES } from "./rules.js";
@@ -51,7 +51,7 @@ const S = {
   band: null,
   input: null,
   micReady: false,
-  session: null, // {exchanges: [{call, hint, source, rejected}]}
+  session: null, // {exchanges: [{exchange, possible, call, hint, source, claudeRejected}]}
   played: [null, null, null],
   playing: false,
   timers: [],

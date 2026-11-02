@@ -2,7 +2,7 @@
 // proposes goes through the proven Lean gate before it is played.
 //
 // Credentials: ANTHROPIC_API_KEY (or any source the Anthropic SDK resolves).
-// Without credentials, or on any error, the caller falls back to callgen.js.
+// Without credentials, or on any error, the caller plays the call `findCall` found.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { describeRule, CHORDS, EXCHANGES } from "./rules.js";

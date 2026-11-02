@@ -9,7 +9,8 @@ install:
 	node web/samples/fetch.mjs
 
 # Run the app: open http://localhost:8765 in Chrome.
-# Set ANTHROPIC_API_KEY to have Claude write the calls (otherwise built-in calls are used).
+# Put ANTHROPIC_API_KEY in .env to have Claude write the calls (otherwise each call is
+# the one the proven search finds).
 run:
 	@lake build sound-and-complete
 	@(sleep 1 && (open http://localhost:8765 2>/dev/null || xdg-open http://localhost:8765 2>/dev/null || true)) &
@@ -19,18 +20,20 @@ run:
 demo:
 	lake exe sound-and-complete
 
-# Browser-side tests (audio pipeline, call generator).
+# Browser-side tests (audio, rules, fretboard).
 test:
 	node --test web/*.test.mjs web/audio/*.test.mjs
 
 build:
 	lake build
 
-# Print what each main theorem depends on, and which axioms its proof uses.
-# `sorryAx` in the output means a proof is not finished.
+# Check the proofs against Challenge.lean in a sandbox (Docker).
+# For six independent kernels: comparator/run.sh --paranoid
 comparator:
 	comparator/run.sh
 
+# Print what each main theorem depends on, and which axioms its proof uses.
+# `sorryAx` in the output means a proof is not finished.
 audit:
 	lake build SoundAndComplete.Audit
 	lake env lean SoundAndComplete/Report.lean

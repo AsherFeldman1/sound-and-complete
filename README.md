@@ -1,5 +1,7 @@
 # Sound and Complete
 
+A hackathon project for Vibecheck, the formal methods hackathon.
+
 Blues call-and-response practice in A minor. You pick rules for your playing
 ("start near the AI's last note", "say less than the call", "land on the third
 on beat 1 of bar 2"). An LLM plays a 2-bar call over a shuffle backing track.
@@ -14,7 +16,7 @@ a playable call that can be answered.
 make install && make run    # build, then open the app at http://localhost:8765
 make audit                  # what each theorem depends on, and its axioms
 make comparator             # lake check + lake comparator in Docker (needs Docker)
-make test                   # browser-side tests (audio pipeline, call generator)
+make test                   # browser-side tests (audio, rules, fretboard)
 make demo                   # terminal demo of the Lean core
 make bench                  # time the answer search
 ```
@@ -23,7 +25,7 @@ To have Claude write the calls, put `ANTHROPIC_API_KEY=...` in a `.env` file in 
 project root (it is git-ignored), or set it in your shell, before `make run`.
 Without a key, each call is the one found by the proven search (`findCall`): always answerable, but plain.
 Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
-(link at the top right). "Watch a demo" plays without a guitar.
+(link at the top right). Set the Mode switch to **Demo** to play without a guitar.
 
 ## How it works
 

@@ -1,6 +1,6 @@
 # Sound and Complete
 
-A hackathon project for Vibecheck, the formal methods hackathon.
+A hackathon project for Vibecheck, the formal methods hackathon. It won first place.
 
 Blues call-and-response practice in A minor. You pick rules for your playing
 ("start near the AI's last note", "say less than the call", "land on the third

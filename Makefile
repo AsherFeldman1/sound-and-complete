@@ -9,7 +9,7 @@ install:
 	node web/samples/fetch.mjs
 
 # Run the app: open http://localhost:8765 in Chrome.
-# Put ANTHROPIC_API_KEY in .env to have Claude write the calls (otherwise each call is
+# Put ANTHROPIC_API_KEY (or OPENAI_API_KEY) in .env to have an LLM write the calls (otherwise each call is
 # the one the proven search finds).
 run:
 	@lake build sound-and-complete

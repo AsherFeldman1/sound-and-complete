@@ -17,7 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { LeanBridge } from "./lean.js";
-import { proposeCalls, llmConfigured } from "./llm.js";
+import { proposeCalls, llmConfigured, llmName } from "./llm.js";
 import { answerIdeas, byTaste } from "./callgen.js";
 import { CHORDS, CHORD_PCS, EXCHANGES } from "./rules.js";
 
@@ -121,7 +121,7 @@ async function api(req, res, urlPath) {
     fs.writeFileSync(path.join(DEBUG_DIR, `${id}.wav`), wavFromPcm16(await readRaw(req), rate));
     return sendJson(res, 200, { ok: true });
   }
-  if (urlPath === "/api/status") return sendJson(res, 200, { llm: llmConfigured() });
+  if (urlPath === "/api/status") return sendJson(res, 200, { llm: llmConfigured(), llmName: llmName() });
   if (req.method !== "POST") return sendJson(res, 405, { error: "use POST" });
   const body = await readJson(req);
   const rules = Array.isArray(body.rules) ? body.rules : [];
@@ -145,7 +145,7 @@ async function api(req, res, urlPath) {
     const proofs = [];
     for (const e of [0, 1, 2]) proofs.push(await possible(e, rules));
     const exchanges = proofs.map((p, e) => ({ exchange: e, possible: p.possible, call: null, hint: null, source: null, claudeRejected: 0 }));
-    if (proofs.some((p) => !p.possible)) return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmError: null });
+    if (proofs.some((p) => !p.possible)) return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmName: llmName(), llmError: null });
 
     // 2. Claude writes calls; the proven gate keeps one it can answer. If none
     //    of Claude's calls can be answered, ask once more.
@@ -173,7 +173,7 @@ async function api(req, res, urlPath) {
       if (!x.call) Object.assign(x, { call: proofs[x.exchange].call, hint: proofs[x.exchange].answer, source: "proof" });
       x.hint = await musicalAnswer(x.exchange, rules, x.call, x.hint);
     }
-    return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmError });
+    return sendJson(res, 200, { exchanges, llm: llmConfigured(), llmName: llmName(), llmError });
   }
 
   if (urlPath === "/api/grade") {
@@ -236,6 +236,6 @@ const server = http.createServer((req, res) => {
 lean.start(); // fail fast if the Lean program is missing
 server.listen(PORT, HOST, () => {
   console.log(`Serving ${ROOT}`);
-  console.log(llmConfigured() ? `LLM: Claude` : `LLM: not configured (set ANTHROPIC_API_KEY); using the calls the proof finds`);
+  console.log(llmConfigured() ? `LLM: ${llmName()}` : `LLM: not configured (set ANTHROPIC_API_KEY or OPENAI_API_KEY); using the calls the proof finds`);
   console.log(`Open http://localhost:${PORT}`);
 });

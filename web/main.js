@@ -421,7 +421,7 @@ async function prepare() {
   // Proof first: if some exchange can't be answered by any call, say so and stop.
   if (session.exchanges.some((x) => !x.possible)) {
     $("prepMsg").textContent = "These rules can't be kept";
-    $("prepSource").textContent = "Lean proved that no call, by Claude or anyone, has an answer that keeps all of these rules where marked. Turn a rule off or loosen one, then try again.";
+    $("prepSource").textContent = `Lean proved that no call, by ${session.llmName} or anyone, has an answer that keeps all of these rules where marked. Turn a rule off or loosen one, then try again.`;
     for (const x of session.exchanges) {
       const item = el("div", "prep-item");
       const left = el("div");
@@ -436,15 +436,15 @@ async function prepare() {
   }
   const fromProof = session.exchanges.filter((x) => x.source === "proof").length;
   $("prepSource").textContent = !session.llm
-    ? "No Claude API key is set, so each call is the one Lean's proof found."
-    : session.llmError ? "Claude couldn't be reached, so each call is the one Lean's proof found."
-    : fromProof ? "Claude wrote these calls, except where marked." : "Claude wrote these calls.";
+    ? "No LLM API key is set, so each call is the one Lean's proof found."
+    : session.llmError ? `${session.llmName} couldn't be reached, so each call is the one Lean's proof found.`
+    : fromProof ? `${session.llmName} wrote these calls, except where marked.` : `${session.llmName} wrote these calls.`;
   for (const x of session.exchanges) {
     const item = el("div", "prep-item");
     const left = el("div");
     left.append(el("div", "what", `Call ${x.exchange + 1}${x.exchange === 2 ? ": turnaround" : ""}`));
     left.append(el("div", "note check", "Lean found an answer"));
-    if (x.claudeRejected) left.append(el("div", "note", `Lean turned down ${x.claudeRejected} of Claude's calls: they had no answer`));
+    if (x.claudeRejected) left.append(el("div", "note", `Lean turned down ${x.claudeRejected} of ${session.llmName}'s calls: they had no answer`));
     if (x.source === "proof" && session.llm && !session.llmError) left.append(el("div", "note", "This call comes from Lean's proof"));
     item.append(left, miniGrid(x.call));
     $("prepList").append(item);

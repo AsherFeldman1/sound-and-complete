@@ -1,17 +1,39 @@
-// llm.js: ask Claude for blues calls. The LLM is NOT trusted: every call it
-// proposes goes through the proven Lean gate before it is played.
+// llm.js: ask an LLM (Claude or OpenAI) for blues calls. The LLM is NOT trusted:
+// every call it proposes goes through the proven Lean gate before it is played.
 //
-// Credentials: ANTHROPIC_API_KEY (or any source the Anthropic SDK resolves).
-// Without credentials, or on any error, the caller plays the call `findCall` found.
+// Credentials: ANTHROPIC_API_KEY (or any source the Anthropic SDK resolves) for
+// Claude, or OPENAI_API_KEY for OpenAI. With both, Claude is used unless
+// LLM_PROVIDER=openai. Without credentials, or on any error, the caller plays the
+// call found by the proven search (findCall) instead.
 
 import Anthropic from "@anthropic-ai/sdk";
 import { describeRule, CHORDS, EXCHANGES } from "./rules.js";
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5";
+// "low" often takes over a minute for 12 calls; "minimal" answers in 10-15 s.
+// Set it empty for models without reasoning.
+const OPENAI_EFFORT = process.env.OPENAI_REASONING_EFFORT ?? "minimal";
 const PER_EXCHANGE = 4;
 
+const hasClaude = () => Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
+const hasOpenAI = () => Boolean(process.env.OPENAI_API_KEY);
+
+/** "claude", "openai", or null when no LLM is configured. */
+function provider() {
+  if (process.env.LLM_PROVIDER === "openai" && hasOpenAI()) return "openai";
+  if (hasClaude()) return "claude";
+  if (hasOpenAI()) return "openai";
+  return null;
+}
+
 export function llmConfigured() {
-  return Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN || process.env.ANTHROPIC_PROFILE);
+  return provider() !== null;
+}
+
+/** The name the app shows for whoever writes the calls. */
+export function llmName() {
+  return provider() === "openai" ? "GPT" : "Claude";
 }
 
 const SCHEMA = {
@@ -107,8 +129,15 @@ export function notesToPhrase(notes) {
   return phrase;
 }
 
-/** Ask Claude for candidate calls: returns [[phrase...] x 3]. Throws on failure. */
+/** Ask the LLM for candidate calls: returns [[phrase...] x 3]. Throws on failure. */
 export async function proposeCalls(rules, { timeoutMs = 60000 } = {}) {
+  const data = provider() === "openai" ? await askOpenAI(rules, timeoutMs) : await askClaude(rules, timeoutMs);
+  const out = [0, 1, 2].map((e) => (data.exchanges?.[e]?.calls ?? []).map((c) => notesToPhrase(c.notes)));
+  if (out.every((calls) => calls.length === 0)) throw new Error("LLM returned no calls");
+  return out;
+}
+
+async function askClaude(rules, timeoutMs) {
   const client = new Anthropic({ timeout: timeoutMs, maxRetries: 1 });
   const response = await client.beta.messages.create({
     model: MODEL,
@@ -120,8 +149,24 @@ export async function proposeCalls(rules, { timeoutMs = 60000 } = {}) {
   });
   if (response.stop_reason === "refusal") throw new Error("LLM declined the request");
   const text = response.content.filter((b) => b.type === "text").map((b) => b.text).join("");
-  const data = JSON.parse(text);
-  const out = [0, 1, 2].map((e) => (data.exchanges?.[e]?.calls ?? []).map((c) => notesToPhrase(c.notes)));
-  if (out.every((calls) => calls.length === 0)) throw new Error("LLM returned no calls");
-  return out;
+  return JSON.parse(text);
+}
+
+// OpenAI's Chat Completions API with a strict JSON schema, over plain fetch.
+async function askOpenAI(rules, timeoutMs) {
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model: OPENAI_MODEL,
+      ...(OPENAI_EFFORT && { reasoning_effort: OPENAI_EFFORT }),
+      response_format: { type: "json_schema", json_schema: { name: "calls", strict: true, schema: SCHEMA } },
+      messages: [{ role: "user", content: prompt(rules) }],
+    }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+  const message = (await res.json()).choices?.[0]?.message;
+  if (message?.refusal) throw new Error("LLM declined the request");
+  return JSON.parse(message?.content ?? "");
 }

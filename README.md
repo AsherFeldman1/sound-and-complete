@@ -23,6 +23,8 @@ make bench                  # time the answer search
 
 To have Claude write the calls, put `ANTHROPIC_API_KEY=...` in a `.env` file in the
 project root (it is git-ignored), or set it in your shell, before `make run`.
+To use OpenAI instead, set `OPENAI_API_KEY` (and optionally `OPENAI_MODEL`, default `gpt-5`).
+With both keys set, Claude is used unless `LLM_PROVIDER=openai`.
 Without a key, each call is the one found by the proven search (`findCall`): always answerable, but plain.
 Use Chrome, wear headphones, and calibrate latency once in the **Input lab**
 (link at the top right). Set the Mode switch to **Demo** to play without a guitar.
